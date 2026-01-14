@@ -1,102 +1,226 @@
 import React, { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom"; // Import useNavigate
 import {
   motion,
   AnimatePresence,
   useMotionValue,
   useTransform,
   animate,
+  useScroll,
+  useMotionValueEvent,
 } from "framer-motion";
 
-const TypewriterMyth = ({ onComplete }) => {
-  const myths = ["dissolve into nothing.", "are filtered by soil."];
-
-  const [index, setIndex] = useState(0);
+// --- 1. TYPEWRITER COMPONENT ---
+const TypewriterText = ({ text, onComplete, delay = 0 }) => {
   const count = useMotionValue(0);
   const rounded = useTransform(count, (latest) => Math.round(latest));
-  const displayText = useTransform(rounded, (latest) =>
-    myths[index].slice(0, latest)
-  );
+  const display = useTransform(rounded, (latest) => text.slice(0, latest));
 
   useEffect(() => {
-    const controls = animate(count, myths[index].length, {
+    const controls = animate(count, text.length, {
       type: "tween",
-      duration: 1.2,
+      duration: 2,
       ease: "easeInOut",
-      onComplete: () => {
-        setTimeout(() => {
-          animate(count, 0, {
-            duration: 0.8,
-            onComplete: () => {
-              if (index === myths.length - 1) {
-                onComplete();
-              } else {
-                setIndex((prev) => prev + 1);
-              }
-            },
-          });
-        }, 1200);
-      },
+      delay: delay,
+      onComplete: onComplete,
     });
     return controls.stop;
-  }, [index]);
+  }, []);
+
+  return <motion.span>{display}</motion.span>;
+};
+
+// --- 2. STACKED MYTHS COMPONENT ---
+const StackedMyths = ({ onComplete }) => {
+  const myths = [
+    "Flushing pills is harmless.",
+    "Water treatment filters them.",
+    "They dissolve into nothing.",
+    "The soil cleans the toxins.",
+    "One bottle doesn't matter.",
+  ];
+
+  const [visibleCount, setVisibleCount] = useState(0);
+  const [isStruck, setIsStruck] = useState(false);
+
+  useEffect(() => {
+    const timeline = [
+      { t: 500, action: () => setVisibleCount(1) },
+      { t: 900, action: () => setVisibleCount(2) },
+      { t: 1300, action: () => setVisibleCount(3) },
+      { t: 1700, action: () => setVisibleCount(4) },
+      { t: 2100, action: () => setVisibleCount(5) },
+      { t: 2800, action: () => setIsStruck(true) },
+      { t: 4000, action: () => onComplete() },
+    ];
+
+    const timers = timeline.map((step) => setTimeout(step.action, step.t));
+    return () => timers.forEach(clearTimeout);
+  }, []);
 
   return (
-    <div className="flex flex-col md:flex-row items-center justify-center gap-x-4 text-center">
-      <span className="text-[#1A1A1A]">Discarded pills</span>
-      <div className="inline-flex items-baseline min-w-[200px] justify-center md:justify-start">
-        <motion.span className="text-[#5D1A1A] italic">
-          {displayText}
-        </motion.span>
-        <motion.span
-          animate={{ opacity: [1, 0] }}
-          transition={{ repeat: Infinity, duration: 0.8 }}
-          className="inline-block w-[2px] md:w-[4px] h-[0.7em] bg-[#5D1A1A] ml-2"
-        />
-      </div>
+    <div className="flex flex-col items-center justify-center gap-2 md:gap-3 px-4 text-center">
+      {myths.map((text, i) => (
+        <div key={i} className="relative w-fit mx-auto">
+          <motion.span
+            initial={{ opacity: 0, y: 10 }}
+            animate={{
+              opacity: i < visibleCount ? 1 : 0,
+              y: i < visibleCount ? 0 : 10,
+            }}
+            transition={{ duration: 0.4 }}
+            className="text-xl md:text-3xl font-medium text-[#1A1A1A]/70 block"
+          >
+            {text}
+          </motion.span>
+
+          <motion.div
+            initial={{ width: "0%" }}
+            animate={{ width: isStruck && i < visibleCount ? "100%" : "0%" }}
+            transition={{ duration: 0.4, delay: i * 0.05 }}
+            className="absolute top-1/2 left-0 h-[2px] md:h-[3px] bg-[#BC4B28] rounded-full"
+            style={{ transform: "translateY(-50%)" }}
+          />
+        </div>
+      ))}
     </div>
   );
+};
+
+// --- 3. TRUTH HEADLINE ---
+const TruthHeadline = ({ onComplete }) => {
+  const [showSubhead, setShowSubhead] = useState(false);
+
+  return (
+    <div className="text-center mb-12 md:mb-24 px-4 w-full max-w-4xl">
+      <h2 className="text-3xl md:text-5xl lg:text-7xl font-medium tracking-tight leading-tight mb-6 text-[#1A1A1A] break-words">
+        <TypewriterText text="Unused medicines" />
+        <br />
+        <span className="text-[#BC4B28] italic">
+          <TypewriterText
+            text="don't disappear."
+            delay={1.5}
+            onComplete={() => setShowSubhead(true)}
+          />
+        </span>
+      </h2>
+      <AnimatePresence>
+        {showSubhead && (
+          <motion.p
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            onAnimationComplete={() => setTimeout(onComplete, 1000)}
+            className="text-lg md:text-2xl lg:text-3xl font-light text-[#1A1A1A]/60 tracking-wide italic"
+          >
+            They move through water, soil, and life.
+          </motion.p>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
+// --- BG VARIANTS ---
+const blobVariant = {
+  animate: {
+    scale: [1, 1.15, 0.9, 1],
+    rotate: [0, 15, -15, 0],
+    x: [0, 40, -40, 0],
+    y: [0, -40, 40, 0],
+    transition: {
+      duration: 25,
+      repeat: Infinity,
+      repeatType: "mirror",
+      ease: "easeInOut",
+    },
+  },
 };
 
 const SilentShock = () => {
   const [step, setStep] = useState(1);
   const [activeCard, setActiveCard] = useState(null);
   const canvasRef = useRef(null);
+  const navigate = useNavigate();
 
+  // --- SCROLL NAVIGATION LOGIC ---
+  const { scrollYProgress } = useScroll();
+  const [redirecting, setRedirecting] = useState(false);
+
+  // Monitor scroll progress
+  useMotionValueEvent(scrollYProgress, "change", (latest) => {
+    // If user scrolls near the bottom (99%) and step 3 is active
+    if (latest > 0.99 && step === 3 && !redirecting) {
+      setRedirecting(true);
+      // Slight delay for effect, then navigate
+      setTimeout(() => {
+        navigate("/actions");
+      }, 800);
+    }
+  });
+
+  // --- CANVAS ANIMATION ---
   useEffect(() => {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
     let animationFrameId;
-
-    const pills = Array.from({ length: 15 }, () => ({
+    const colors = ["#4A5D23", "#BC4B28", "#2C5F58", "#966F33"];
+    const items = Array.from({ length: 15 }, () => ({
       x: Math.random() * window.innerWidth,
       y: Math.random() * window.innerHeight,
-      w: Math.random() * 20 + 10,
-      h: Math.random() * 60 + 25,
-      color: ["#3E4F3C", "#5D1A1A", "#C05621"][Math.floor(Math.random() * 3)],
+      w: Math.random() * 20 + 15,
+      h: Math.random() * 50 + 30,
+      color: colors[Math.floor(Math.random() * colors.length)],
       angle: Math.random() * Math.PI * 2,
-      rotationSpeed: (Math.random() - 0.5) * 0.001,
-      vx: (Math.random() - 0.5) * 0.08,
-      vy: (Math.random() - 0.5) * 0.08,
-      type: Math.random() > 0.5 ? "capsule" : "round",
+      rotationSpeed: (Math.random() - 0.5) * 0.002,
+      vx: (Math.random() - 0.5) * 0.15,
+      vy: (Math.random() - 0.5) * 0.15,
+      type:
+        Math.random() > 0.6
+          ? "capsule"
+          : Math.random() > 0.5
+          ? "round"
+          : "cross",
     }));
 
-    const drawPill = (p) => {
+    const drawItem = (p) => {
       ctx.save();
       ctx.translate(p.x, p.y);
       ctx.rotate(p.angle);
       ctx.strokeStyle = p.color;
-      ctx.lineWidth = 1;
+      ctx.lineWidth = 1.5;
+      ctx.lineCap = "round";
       ctx.fillStyle = p.color;
       ctx.beginPath();
       if (p.type === "capsule") {
         ctx.roundRect(-p.w / 2, -p.h / 2, p.w, p.h, p.w / 2);
-        ctx.globalAlpha = 0.05;
+        ctx.globalAlpha = 0.02;
         ctx.fill();
         ctx.globalAlpha = 0.15;
         ctx.stroke();
-      } else {
+      } else if (p.type === "round") {
         ctx.arc(0, 0, p.w, 0, Math.PI * 2);
-        ctx.globalAlpha = 0.05;
+        ctx.globalAlpha = 0.02;
+        ctx.fill();
+        ctx.globalAlpha = 0.15;
+        ctx.stroke();
+      } else if (p.type === "cross") {
+        const size = p.w * 0.8;
+        const thickness = size / 3;
+        ctx.moveTo(-thickness / 2, -size / 2);
+        ctx.lineTo(thickness / 2, -size / 2);
+        ctx.lineTo(thickness / 2, -thickness / 2);
+        ctx.lineTo(size / 2, -thickness / 2);
+        ctx.lineTo(size / 2, thickness / 2);
+        ctx.lineTo(thickness / 2, thickness / 2);
+        ctx.lineTo(thickness / 2, size / 2);
+        ctx.lineTo(-thickness / 2, size / 2);
+        ctx.lineTo(-thickness / 2, thickness / 2);
+        ctx.lineTo(-size / 2, thickness / 2);
+        ctx.lineTo(-size / 2, -thickness / 2);
+        ctx.lineTo(-thickness / 2, -thickness / 2);
+        ctx.closePath();
+        ctx.globalAlpha = 0.02;
         ctx.fill();
         ctx.globalAlpha = 0.15;
         ctx.stroke();
@@ -106,7 +230,7 @@ const SilentShock = () => {
 
     const animate = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      pills.forEach((p) => {
+      items.forEach((p) => {
         p.x += p.vx;
         p.y += p.vy;
         p.angle += p.rotationSpeed;
@@ -114,7 +238,7 @@ const SilentShock = () => {
         if (p.x > canvas.width + 100) p.x = -100;
         if (p.y < -100) p.y = canvas.height + 100;
         if (p.y > canvas.height + 100) p.y = -100;
-        drawPill(p);
+        drawItem(p);
       });
       animationFrameId = requestAnimationFrame(animate);
     };
@@ -136,188 +260,231 @@ const SilentShock = () => {
   const stats = [
     {
       id: 0,
-      val: "70%",
-      label: "Water Saturation",
-      color: "#3E4F3C",
-      curiosity: "Medicated tap water?",
-      desc: "Pharmaceutical residues detected in 70% of global aquifers. Compounds bypass filtration.",
+      val: "80%",
+      label: "WATER CONTAMINATION",
+      color: "#4A5D23",
+      headline: "Your tap water carries pharmaceutical traces",
+      body: [
+        "Antidepressants, antibiotics, and painkillers enter wastewater systems.",
+        "Most treatment plants are not designed to remove drug compounds.",
+        "These residues persist in rivers, groundwater, and drinking supplies.",
+      ],
     },
     {
       id: 1,
-      val: "30%",
-      label: "Resistance Rise",
-      color: "#5D1A1A",
-      curiosity: "Why aren't pills working?",
-      desc: "Waste creates superbug breeding grounds. Environmental pollution drives resistance.",
+      val: "2050",
+      label: "CRITICAL MASS",
+      color: "#BC4B28",
+      headline: "Antibiotic resistance becomes a dominant threat",
+      body: [
+        "Low-level pharmaceutical pollution creates constant exposure.",
+        "Bacteria adapt faster when drugs are present in the environment.",
+        "This accelerates the loss of effectiveness of life-saving medicines.",
+      ],
     },
     {
       id: 2,
-      val: "50+",
-      label: "Species Altered",
-      color: "#C05621",
-      curiosity: "The end of species?",
-      desc: "Over 50 aquatic species face behavioral shifts and gender collapse due to re-coded biology.",
+      val: "DNA",
+      label: "BIOLOGICAL COLLAPSE",
+      color: "#2C5F58",
+      headline: "Pharmaceuticals interfere with natural biology",
+      body: [
+        "Hormonal compounds disrupt endocrine systems in aquatic life.",
+        "Observed effects include altered behavior and reproduction.",
+        "Some species show long-term genetic and population-level changes.",
+      ],
     },
   ];
 
   return (
-    <div className="relative min-h-screen w-full bg-[#F9F7F2] text-[#1A1A1A] font-serif overflow-hidden flex flex-col items-center justify-center">
+    <div className="relative min-h-screen w-full bg-[#EFEDE6] text-[#1A1A1A] font-serif overflow-x-hidden flex flex-col items-center">
+      {/* BG LAYERS */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
+        <motion.div
+          variants={blobVariant}
+          animate="animate"
+          className="absolute -top-[10%] -left-[10%] w-[60%] h-[60%] rounded-full bg-[#4A5D23]/10 blur-[100px] mix-blend-multiply"
+        />
+        <motion.div
+          variants={blobVariant}
+          animate="animate"
+          transition={{ delay: 5 }}
+          className="absolute bottom-[5%] -right-[15%] w-[65%] h-[65%] rounded-full bg-[#BC4B28]/10 blur-[100px] mix-blend-multiply"
+        />
+        <motion.div
+          variants={blobVariant}
+          animate="animate"
+          transition={{ delay: 2 }}
+          className="absolute -bottom-[15%] -left-[10%] w-[60%] h-[60%] rounded-full bg-[#2C5F58]/10 blur-[100px] mix-blend-multiply"
+        />
+      </div>
       <canvas
         ref={canvasRef}
         className="absolute inset-0 z-0 pointer-events-none fixed"
       />
-      <div className="absolute inset-0 z-[1] opacity-[0.05] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')] mix-blend-multiply fixed" />
+      <div className="absolute inset-0 opacity-[0.12] z-[1] pointer-events-none mix-blend-multiply fixed bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
 
-      {/* Vignette to help stats visibility */}
-      <motion.div
-        animate={{ opacity: step === 3 ? 1 : 0 }}
-        className="absolute inset-0 z-[2] pointer-events-none bg-gradient-to-t from-[#1A1A1A]/5 via-transparent to-transparent"
-      />
-
-      <main className="relative z-10 w-full max-w-7xl px-6 flex flex-col items-center">
-        {/* ACT I & II: HEADLINE SECTION */}
-        <motion.div
-          animate={{ y: step > 1 ? -60 : 0 }}
-          transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
-          className="w-full text-center mb-8"
-        >
-          <div className="text-3xl md:text-[4.2vw] font-medium tracking-tight leading-none mb-6">
-            {step === 1 ? (
-              <TypewriterMyth onComplete={() => setStep(2)} />
-            ) : (
-              <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                Unused medicines don't disappear.
-              </motion.span>
-            )}
-          </div>
-
-          <AnimatePresence onExitComplete={() => setStep(3)}>
-            {step >= 2 && (
-              <motion.p
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                onAnimationComplete={() => setTimeout(() => setStep(3), 800)}
-                className="text-lg md:text-2xl font-light text-[#1A1A1A]/50 tracking-wide italic"
-              >
-                They move through water, soil, and life.
-              </motion.p>
-            )}
-          </AnimatePresence>
-        </motion.div>
-
-        {/* ACT III: STATS REVEAL (FORCED VISIBILITY) */}
-        <div className="w-full min-h-[350px] flex items-center justify-center">
-          <AnimatePresence>
-            {step === 3 && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="w-full flex flex-col md:flex-row gap-6 h-auto md:h-[320px]"
-              >
-                {stats.map((stat) => (
-                  <motion.div
-                    key={stat.id}
-                    layout
-                    onHoverStart={() => setActiveCard(stat.id)}
-                    onHoverEnd={() => setActiveCard(null)}
-                    style={{ backgroundColor: stat.color }}
-                    animate={{
-                      flex: activeCard === stat.id ? 2 : 1,
-                      boxShadow:
-                        activeCard === stat.id
-                          ? "0 25px 50px -12px rgba(0,0,0,0.25)"
-                          : "0 10px 15px -3px rgba(0,0,0,0.1)",
-                    }}
-                    className="relative rounded-[32px] overflow-hidden cursor-pointer p-8 flex flex-col justify-between transition-all duration-300"
-                  >
-                    <div className="z-10 flex justify-between items-start text-[#F9F7F2]/60">
-                      <span className="text-[10px] font-sans font-bold tracking-[0.2em]">
-                        0{stat.id + 1}
-                      </span>
-                      <motion.div
-                        animate={{ rotate: activeCard === stat.id ? 90 : 0 }}
-                      >
-                        →
-                      </motion.div>
-                    </div>
-
-                    <div className="z-10 text-[#F9F7F2]">
-                      <motion.h3
-                        layout="position"
-                        className="text-5xl md:text-7xl font-light mb-2 tracking-tighter"
-                      >
-                        {stat.val}
-                      </motion.h3>
-                      <motion.p
-                        layout="position"
-                        className="text-sm font-medium italic opacity-90 mb-1 leading-tight"
-                      >
-                        {stat.curiosity}
-                      </motion.p>
-
-                      <AnimatePresence>
-                        {activeCard === stat.id && (
-                          <motion.p
-                            initial={{ opacity: 0, y: 5 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="text-[11px] md:text-xs opacity-80 border-t border-white/20 pt-4 mt-4 leading-relaxed max-w-xs"
-                          >
-                            {stat.desc}
-                          </motion.p>
-                        )}
-                      </AnimatePresence>
-
-                      <motion.h4
-                        layout="position"
-                        className="text-[9px] font-bold uppercase tracking-[0.3em] opacity-40 mt-4"
-                      >
-                        {stat.label}
-                      </motion.h4>
-                    </div>
-                  </motion.div>
-                ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-
-        {/* ACTION LINK */}
-        <AnimatePresence>
-          {step === 3 && (
+      <main className="relative z-10 w-full max-w-7xl px-4 md:px-6 flex flex-col items-center pt-32 pb-32 min-h-screen justify-center">
+        {/* STEP 1 */}
+        <AnimatePresence mode="wait">
+          {step === 1 && (
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="mt-12 w-full flex justify-end px-4"
+              key="myths"
+              exit={{ opacity: 0, scale: 0.95, filter: "blur(10px)" }}
+              transition={{ duration: 0.8 }}
+              className="absolute w-full px-4"
             >
-              <a href="#" className="group flex items-center gap-4">
-                <span className="text-[10px] md:text-xs font-sans font-bold tracking-[0.2em] uppercase opacity-60">
-                  Initiate the Shift
-                  <Link to="/actions">Initiate the shift</Link>
-                </span>
-
-                <div className="w-12 h-12 rounded-full border border-[#1A1A1A]/10 flex items-center justify-center group-hover:bg-[#5D1A1A] transition-all duration-500">
-                  <span className="text-white opacity-0 group-hover:opacity-100 font-bold">
-                    ↓
-                  </span>
-                </div>
-              </a>
+              <StackedMyths onComplete={() => setStep(2)} />
             </motion.div>
           )}
         </AnimatePresence>
-      </main>
 
-      {/* Persistent Micro Copy */}
-      <AnimatePresence>
-        {step === 3 && (
-          <motion.p
+        {/* STEP 2 & 3 */}
+        {step >= 2 && (
+          <motion.div
+            layout
             initial={{ opacity: 0 }}
-            animate={{ opacity: 0.3 }}
-            className="fixed bottom-6 left-10 text-[10px] tracking-[0.2em] uppercase hidden md:block"
+            animate={{ opacity: 1 }}
+            transition={{ duration: 1 }}
+            className="w-full flex flex-col items-center"
           >
-            Compounds persist for decades.
-          </motion.p>
+            <TruthHeadline onComplete={() => setStep(3)} />
+
+            <AnimatePresence>
+              {step === 3 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 40 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.8 }}
+                  className="w-full"
+                >
+                  <div className="w-full text-center mb-10">
+                    <p className="text-[10px] md:text-xs uppercase tracking-[0.3em] font-sans font-bold text-[#1A1A1A] opacity-40">
+                      The trace we ignore
+                    </p>
+                  </div>
+
+                  <div className="flex flex-col lg:flex-row gap-4 mb-20 w-full">
+                    {stats.map((stat) => (
+                      <motion.div
+                        key={stat.id}
+                        layout
+                        onHoverStart={() => setActiveCard(stat.id)}
+                        onHoverEnd={() => setActiveCard(null)}
+                        style={{ backgroundColor: stat.color }}
+                        animate={{
+                          flex:
+                            activeCard === stat.id && window.innerWidth >= 1024
+                              ? 1.5
+                              : 1,
+                        }}
+                        transition={{
+                          layout: { duration: 0.4, ease: "easeInOut" },
+                        }}
+                        className="relative rounded-[20px] overflow-hidden cursor-pointer p-6 md:p-8 flex flex-col justify-between shadow-xl min-h-[350px] lg:min-h-[450px]"
+                      >
+                        <div className="absolute inset-0 opacity-[0.1] bg-[url('https://grainy-gradients.vercel.app/noise.svg')] mix-blend-multiply pointer-events-none" />
+                        <div className="z-10 flex justify-between items-start text-[#F9F7F2]/60 mb-2">
+                          <span className="text-xs font-sans font-bold tracking-[0.2em]">
+                            0{stat.id + 1}
+                          </span>
+                          <motion.div
+                            animate={{
+                              rotate: activeCard === stat.id ? 90 : 0,
+                            }}
+                            className="text-lg"
+                          >
+                            →
+                          </motion.div>
+                        </div>
+                        <div className="z-10 text-[#F9F7F2] flex flex-col h-full">
+                          <motion.h3
+                            layout="position"
+                            className="text-5xl md:text-6xl lg:text-8xl font-light leading-none tracking-tighter mb-4"
+                          >
+                            {stat.val}
+                          </motion.h3>
+                          <motion.h4
+                            layout="position"
+                            className="text-lg md:text-xl lg:text-2xl font-medium italic opacity-100 leading-tight mb-2"
+                          >
+                            {stat.headline}
+                          </motion.h4>
+                          <div className="overflow-hidden mt-auto">
+                            <AnimatePresence>
+                              {activeCard === stat.id && (
+                                <motion.div
+                                  initial={{ opacity: 0, height: 0 }}
+                                  animate={{ opacity: 1, height: "auto" }}
+                                  exit={{ opacity: 0, height: 0 }}
+                                  transition={{
+                                    duration: 0.4,
+                                    ease: "circOut",
+                                  }}
+                                >
+                                  <div className="flex flex-col gap-3 pt-6 border-t border-white/20 mt-4">
+                                    {stat.body.map((line, i) => (
+                                      <motion.p
+                                        key={i}
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: i * 0.1 }}
+                                        className="text-sm md:text-base font-sans font-light opacity-80 leading-snug max-w-[95%]"
+                                      >
+                                        {line}
+                                      </motion.p>
+                                    ))}
+                                  </div>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+                          </div>
+                        </div>
+                        <motion.h4
+                          layout="position"
+                          className="text-[9px] font-bold uppercase tracking-[0.3em] opacity-40 mt-8 text-[#F9F7F2]"
+                        >
+                          {stat.label}
+                        </motion.h4>
+                      </motion.div>
+                    ))}
+                  </div>
+
+                  {/* --- SCROLL TRANSITION AREA --- */}
+                  <div className="relative w-full flex flex-col items-center pt-12 pb-32">
+                    {/* 1. Connector Line (Infinite height perception) */}
+                    <motion.div
+                      initial={{ height: 0 }}
+                      whileInView={{ height: 120 }}
+                      viewport={{ once: true }}
+                      transition={{ duration: 1.5, ease: "easeInOut" }}
+                      className="w-[1px] bg-[#1A1A1A]/20 mb-6"
+                    />
+
+                    {/* 2. Scroll Prompt Text */}
+                    <p className="text-xl md:text-2xl italic font-serif text-[#1A1A1A]/60 mb-2 text-center">
+                      This is not irreversible.
+                    </p>
+                    <p className="text-[10px] font-sans font-bold uppercase tracking-[0.2em] text-[#BC4B28] animate-pulse">
+                      Scroll to break the cycle
+                    </p>
+
+                    {/* 3. Loading/Progress Bar at bottom */}
+                    {redirecting && (
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: "100%" }}
+                        transition={{ duration: 0.8, ease: "easeInOut" }}
+                        className="fixed bottom-0 left-0 h-1 bg-[#BC4B28] z-50"
+                      />
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
         )}
-      </AnimatePresence>
+      </main>
     </div>
   );
 };

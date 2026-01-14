@@ -4,25 +4,33 @@ export default {
   theme: {
     extend: {
       animation: {
-        fadeIn: "fadeIn 1.5s ease-out forwards",
-        bounce: "bounce 1s infinite",
-        "pulse-slow":
-          "pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite alternate",
-        "float-slow": "float 8s ease-in-out infinite alternate", // added
+        "fade-in": "fadeIn 1s ease-out forwards",
+        "fade-in-up": "fadeInUp 0.6s ease-out forwards",
+        "card-appear": "cardAppear 0.6s ease-out forwards",
+        "bounce-slow": "bounceSlow 2s ease-in-out infinite",
+        "float-subtle": "floatSubtle 20s ease-in-out infinite alternate",
+        pulse: "pulse 2s ease-in-out infinite",
       },
       keyframes: {
         fadeIn: {
           "0%": { opacity: 0 },
           "100%": { opacity: 1 },
         },
-        pulse: {
-          "0%, 100%": { opacity: 1 },
-          "50%": { opacity: 0.5 },
+        fadeInUp: {
+          "0%": { opacity: 0, transform: "translateY(10px)" },
+          "100%": { opacity: 1, transform: "translateY(0)" },
         },
-        float: {
-          // added
-          "0%": { transform: "translateY(0px)" },
-          "100%": { transform: "translateY(-20px)" },
+        cardAppear: {
+          "0%": { opacity: 0, transform: "translateY(10px) scale(0.98)" },
+          "100%": { opacity: 1, transform: "translateY(0) scale(1)" },
+        },
+        bounceSlow: {
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(-4px)" },
+        },
+        floatSubtle: {
+          "0%": { transform: "translate(0px, 0px)" },
+          "100%": { transform: "translate(30px, 30px)" },
         },
       },
     },
