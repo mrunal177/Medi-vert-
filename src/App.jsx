@@ -12,7 +12,7 @@ import Login from "./components/Login";
 import SilentScene from "./components/SilentShock";
 import WhatCanWeDo from "./pages/WhatCanWeDo";
 import Community from "./pages/Community";
-import Contribute from "./pages/contribute";
+import Contribute from "./pages/contribute"; // <--- Imported here
 import MapPage from "./pages/MapPage";
 import LearnPage from "./pages/LearnPage";
 
@@ -42,7 +42,6 @@ function App() {
             path="/actions"
             element={
               <PageTransition>
-                {/* 1. PASS THE PROP HERE */}
                 <WhatCanWeDo onJoinClick={() => setShowLogin(true)} />
               </PageTransition>
             }
@@ -66,12 +65,14 @@ function App() {
             }
           />
 
+          {/* --- FIX IS HERE --- */}
           <Route
             path="/contribute"
             element={
               <PageTransition>
-                {/* 1. AND HERE */}
-                <WhatCanWeDo onJoinClick={() => setShowLogin(true)} />
+                {/* Changed from WhatCanWeDo to Contribute */}
+                {/* Assuming Contribute also needs the login trigger, passing it as a prop */}
+                <Contribute onRegisterClick={() => setShowLogin(true)} />
               </PageTransition>
             }
           />

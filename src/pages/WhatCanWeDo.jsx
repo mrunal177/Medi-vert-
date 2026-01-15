@@ -38,7 +38,7 @@ const actions = [
     title: "Action",
     subtitle: "Join Collection Drives",
     desc: "Participate in local disposal drives and community-led efforts to reduce waste.",
-    to: null, // <--- CHANGED: Null means "Click to Open Popup" instead of a Link
+    to: "/contribute", // <--- CHANGED: Now links directly to the Contribute page
     color: "#2C5F58", // Deep Teal
     label: "PARTICIPATE",
     pattern: "wave",
@@ -135,7 +135,6 @@ const CardPattern = ({ type, color }) => {
   }
 };
 
-// 3. Receive the 'onJoinClick' prop
 const WhatCanWeDo = ({ onJoinClick }) => {
   return (
     <section className="relative min-h-screen w-full bg-[#EFEDE6] text-[#1A1A1A] font-serif overflow-hidden flex flex-col justify-between">
@@ -248,7 +247,6 @@ const WhatCanWeDo = ({ onJoinClick }) => {
         {/* --- CARDS GRID --- */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-32">
           {actions.map((action, index) => {
-            // 4. Conditional Logic: If 'to' is null, make it a Button that triggers login
             const isButton = action.to === null;
             const Wrapper = isButton ? "div" : Link;
             const props = isButton
@@ -319,13 +317,12 @@ const WhatCanWeDo = ({ onJoinClick }) => {
           })}
         </div>
 
-        {/* --- FOOTER CTA (UPDATED) --- */}
+        {/* --- FOOTER CTA --- */}
         <div className="text-center relative z-20">
           <p className="text-2xl font-serif italic text-[#1A1A1A]/80 mb-8 drop-shadow-sm font-medium">
             Change doesn’t begin with everyone.
           </p>
 
-          {/* 5. Button triggers Login Popup */}
           <button onClick={onJoinClick} className="inline-block group">
             <span className="relative z-10 inline-flex items-center gap-3 px-8 py-4 bg-[#1A1A1A] text-[#EFEDE6] rounded-full overflow-hidden transition-transform duration-300 hover:scale-105 shadow-xl hover:shadow-2xl">
               <span className="text-xs font-sans font-bold uppercase tracking-[0.2em]">

@@ -11,35 +11,44 @@ const navLinks = [
   { name: "Learn", path: "/learn" },
   { name: "Map", path: "/map" },
   { name: "Community", path: "/community" },
-  { name: "contribute", path: "/contribute" },
+  { name: "Contribute", path: "/contribute" },
 ];
 
-const Navbar = () => {
+const Navbar = ({ onLoginClick }) => {
   const location = useLocation();
   const { scrollY } = useScroll();
-  const [visible, setVisible] = useState(false); // Default hidden logic handles initial state
 
+  // FIX 1: Default to TRUE so it's visible immediately on load (except on Home)
   const isHome = location.pathname === "/actions";
+  const [visible, setVisible] = useState(!isHome);
 
   useMotionValueEvent(scrollY, "change", (latest) => {
-    const previous = scrollY.getPrevious();
+    const previous = scrollY.getPrevious() || 0;
 
-    // LOGIC:
-    // 1. If we are on Home and at the very top (< 100px), ALWAYS hide (Immersive Hero).
-    // 2. If scrolling DOWN (latest > previous) and we are not at the very top, hide.
-    // 3. If scrolling UP (latest < previous), show.
+    // FIX 2: STRICT LOGIC SEPARATION
 
-    if (isHome && latest < 100) {
+    // 1. Are we at the very top of the page? (0-50px)
+    if (latest < 50) {
+      if (isHome) {
+        setVisible(false); // Hide on Home (Hero Section)
+      } else {
+        setVisible(true); // Always Show on other pages
+      }
+      return; // Stop here, don't run the scroll direction logic
+    }
+
+    // 2. Are we scrolling DOWN?
+    if (latest > previous) {
       setVisible(false);
-    } else if (latest > previous && latest > 50) {
-      setVisible(false); // Scrolling Down
-    } else {
-      setVisible(true); // Scrolling Up
+    }
+    // 3. Are we scrolling UP?
+    else {
+      setVisible(true);
     }
   });
 
   return (
-    <AnimatePresence>
+    <AnimatePresence mode="wait">
       {visible && (
         <motion.nav
           initial={{ y: -100, opacity: 0 }}
@@ -82,16 +91,16 @@ const Navbar = () => {
                 })}
               </div>
 
-              {/* Action Button */}
-              <Link
-                to="/start"
-                className="group relative px-5 py-2 overflow-hidden rounded-full bg-[#1A1A1A] text-[#EFEDE6]"
+              {/* Action Button (Connected to Login Modal) */}
+              <button
+                onClick={onLoginClick}
+                className="group relative px-5 py-2 overflow-hidden rounded-full bg-[#1A1A1A] text-[#EFEDE6] cursor-pointer"
               >
                 <div className="absolute inset-0 bg-[#BC4B28] translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
                 <span className="relative z-10 text-[10px] font-sans font-bold uppercase tracking-[0.2em] group-hover:text-white transition-colors">
                   Join Now
                 </span>
-              </Link>
+              </button>
             </div>
           </div>
         </motion.nav>

@@ -2,7 +2,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 
-// --- BACKGROUND: TOPOGRAPHIC LINES (Distinct Theme) ---
+// --- BACKGROUND: TOPOGRAPHIC LINES ---
 const TopoBackground = () => (
   <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
     {/* SVG Topo Pattern */}
@@ -63,11 +63,7 @@ export default function WhatCanWeDo() {
       {/* ================= HEADER ================= */}
       <Reveal>
         <section className="max-w-7xl mx-auto px-6 mb-24 text-center relative z-10">
-          <div className="inline-flex items-center gap-2 border border-[#1A1A1A]/10 px-4 py-1.5 rounded-full mb-8 bg-white/50 backdrop-blur-sm">
-            <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-[#1A1A1A]/60">
-              Field Operations
-            </span>
-          </div>
+          {/* Removed Field Operations Badge Here */}
 
           <h1 className="text-6xl md:text-8xl font-medium tracking-tighter text-[#1A1A1A] mb-8 leading-[0.9]">
             Mobilize{" "}

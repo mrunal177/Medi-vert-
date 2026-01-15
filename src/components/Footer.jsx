@@ -1,111 +1,89 @@
 import React from "react";
-import { Link } from "react-router-dom";
 
 export default function Footer() {
   return (
-    <footer className="bg-[#1A1A1A] text-[#EFEDE6] pt-24 pb-12 font-sans relative overflow-hidden">
-      {/* Background Decor */}
-      <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#4A5D23] via-[#BC4B28] to-[#2C5F58] opacity-50" />
-      <div className="absolute -top-[20%] -right-[10%] w-[500px] h-[500px] bg-[#4A5D23]/5 rounded-full blur-[100px] pointer-events-none" />
+    <footer className="bg-[#101010] text-[#EFEDE6] pt-10 pb-5 font-sans relative overflow-hidden">
+      {/* --- TEXTURE & DECOR --- */}
+      <div className="absolute inset-0 opacity-[0.05] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
+      <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-[#1A1A1A] via-[#EFEDE6]/20 to-[#1A1A1A]" />
 
       <div className="max-w-7xl mx-auto px-6 relative z-10">
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-12 border-b border-[#EFEDE6]/10 pb-16 mb-12">
-          {/* Column 1: Brand */}
-          <div className="md:col-span-5">
-            <h2 className="text-3xl font-serif font-bold tracking-tight mb-6">
-              MediVert.
+        {/* --- MAIN CONTENT (Compact Flex) --- */}
+        <div className="flex flex-col lg:flex-row lg:justify-between items-start gap-10 mb-10">
+          {/* LEFT: MISSION (Smaller Text) */}
+          <div className="max-w-sm">
+            <h2 className="text-3xl md:text-4xl font-serif leading-[0.9] tracking-tighter mb-3 text-[#EFEDE6]">
+              Close the <br />
+              <span className="text-[#4A5D23] italic font-light">Loop.</span>
             </h2>
-            <p className="text-sm opacity-60 leading-relaxed max-w-sm font-serif italic">
-              Mobilizing communities to safely dispose of pharmaceutical waste.
-              Protecting soil, water, and future generations through collective
-              action.
+            <p className="text-xs opacity-50 leading-relaxed font-sans font-light">
+              We are building the infrastructure for a toxin-free future.
+              Guardians of soil and water tables.
             </p>
+          </div>
 
-            <div className="mt-8 flex gap-4">
-              {/* Social Placeholders */}
-              <div className="w-10 h-10 rounded-full border border-[#EFEDE6]/20 flex items-center justify-center hover:bg-[#EFEDE6] hover:text-[#1A1A1A] transition-colors cursor-pointer">
-                𝕏
-              </div>
-              <div className="w-10 h-10 rounded-full border border-[#EFEDE6]/20 flex items-center justify-center hover:bg-[#EFEDE6] hover:text-[#1A1A1A] transition-colors cursor-pointer">
-                Ig
-              </div>
-              <div className="w-10 h-10 rounded-full border border-[#EFEDE6]/20 flex items-center justify-center hover:bg-[#EFEDE6] hover:text-[#1A1A1A] transition-colors cursor-pointer">
-                In
-              </div>
+          {/* RIGHT: COMPACT GRID */}
+          <div className="w-full max-w-lg flex flex-col md:flex-row gap-8 md:gap-16 items-start md:items-end">
+            {/* 1. TEAM (Architects) */}
+            <div>
+              <span className="font-mono text-[9px] uppercase tracking-[0.2em] opacity-30 block mb-3">
+                Architects
+              </span>
+              <ul className="grid grid-cols-2 gap-x-8 gap-y-1 text-xs font-serif opacity-80">
+                <li className="hover:text-[#4A5D23] cursor-default">Mrunal</li>
+                <li className="hover:text-[#4A5D23] cursor-default">Avni</li>
+                <li className="hover:text-[#4A5D23] cursor-default">Sawani</li>
+                <li className="hover:text-[#4A5D23] cursor-default">Mihika</li>
+              </ul>
             </div>
-          </div>
 
-          {/* Column 2: Navigation */}
-          <div className="md:col-span-3">
-            <h3 className="font-mono text-xs font-bold uppercase tracking-[0.2em] opacity-40 mb-8">
-              Operations
-            </h3>
-            <ul className="space-y-4 text-sm font-sans opacity-80">
-              <li>
-                <Link
-                  to="/map"
-                  className="hover:text-[#BC4B28] transition-colors"
+            {/* 2. NEWSLETTER (Condensed) */}
+            <div className="flex-1 w-full">
+              <div className="relative group border-b border-[#EFEDE6]/20">
+                <input
+                  type="email"
+                  placeholder="Field Updates..."
+                  className="w-full bg-transparent py-2 text-sm font-serif placeholder:text-[#EFEDE6]/20 outline-none focus:border-[#BC4B28] transition-colors"
+                />
+                <button className="absolute right-0 top-1/2 -translate-y-1/2 text-[9px] font-mono font-bold uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity text-[#BC4B28]">
+                  ↵
+                </button>
+              </div>
+              <div className="mt-2 text-right">
+                <a
+                  href="mailto:contact@medivert.org"
+                  className="text-[10px] font-mono opacity-40 hover:text-[#BC4B28] transition-colors"
                 >
-                  Locator Map
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/actions"
-                  className="hover:text-[#BC4B28] transition-colors"
-                >
-                  Missions
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/community"
-                  className="hover:text-[#BC4B28] transition-colors"
-                >
-                  Community Logs
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/learn"
-                  className="hover:text-[#BC4B28] transition-colors"
-                >
-                  Education Dossier
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          {/* Column 3: Legal / Contact */}
-          <div className="md:col-span-4">
-            <h3 className="font-mono text-xs font-bold uppercase tracking-[0.2em] opacity-40 mb-8">
-              Secure Channel
-            </h3>
-            <p className="text-sm opacity-60 mb-2">General Inquiries:</p>
-            <a
-              href="mailto:contact@medivert.org"
-              className="text-xl font-serif hover:text-[#4A5D23] transition-colors block mb-8"
-            >
-              contact@medivert.org
-            </a>
-
-            <div className="flex gap-4 text-xs opacity-40 font-mono">
-              <a href="#" className="hover:opacity-100">
-                Privacy Protocol
-              </a>
-              <span>/</span>
-              <a href="#" className="hover:opacity-100">
-                Terms of Service
-              </a>
+                  contact@medivert.org
+                </a>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Bottom Bar */}
-        <div className="flex flex-col md:flex-row justify-between items-center opacity-40 text-[10px] font-mono uppercase tracking-widest">
-          <span>© 2026 MediVert Initiative. All systems operational.</span>
-          <span className="mt-2 md:mt-0">Designed for Earth.</span>
+        {/* --- BOTTOM: SYSTEM STATUS --- */}
+        <div className="border-t border-[#EFEDE6]/10 pt-4 flex justify-between items-center relative z-20">
+          <div className="flex items-center gap-2">
+            <span className="relative flex h-1.5 w-1.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#4A5D23] opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-[#4A5D23]"></span>
+            </span>
+            <span className="font-mono text-[9px] uppercase tracking-[0.2em] opacity-40">
+              System Active
+            </span>
+          </div>
+
+          <div className="text-right">
+            <span className="font-mono text-[9px] uppercase tracking-widest opacity-20">
+              © 2026 MediVert
+            </span>
+          </div>
         </div>
+
+        {/* --- WATERMARK (Low Profile) --- */}
+        <h1 className="absolute -bottom-3 left-1/2 -translate-x-1/2 w-full text-center text-[12vw] font-bold text-[#EFEDE6] opacity-[0.04] pointer-events-none select-none tracking-tighter leading-none z-0">
+          MEDIVERT
+        </h1>
       </div>
     </footer>
   );

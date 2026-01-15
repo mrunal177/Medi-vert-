@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom"; // Import useNavigate
+import { useNavigate } from "react-router-dom";
 import {
   motion,
   AnimatePresence,
   useMotionValue,
   useTransform,
   animate,
-  useScroll,
-  useMotionValueEvent,
+  // useScroll,  <-- REMOVED
+  // useMotionValueEvent, <-- REMOVED
 } from "framer-motion";
 
 // --- 1. TYPEWRITER COMPONENT ---
@@ -143,21 +143,16 @@ const SilentShock = () => {
   const canvasRef = useRef(null);
   const navigate = useNavigate();
 
-  // --- SCROLL NAVIGATION LOGIC ---
-  const { scrollYProgress } = useScroll();
-  const [redirecting, setRedirecting] = useState(false);
+  // --- NEW TRANSITION STATE ---
+  const [isNavigating, setIsNavigating] = useState(false);
 
-  // Monitor scroll progress
-  useMotionValueEvent(scrollYProgress, "change", (latest) => {
-    // If user scrolls near the bottom (99%) and step 3 is active
-    if (latest > 0.99 && step === 3 && !redirecting) {
-      setRedirecting(true);
-      // Slight delay for effect, then navigate
-      setTimeout(() => {
-        navigate("/actions");
-      }, 800);
-    }
-  });
+  const handleNextChapter = () => {
+    setIsNavigating(true);
+    // Wait for animation (800ms) then navigate
+    setTimeout(() => {
+      navigate("/actions");
+    }, 800);
+  };
 
   // --- CANVAS ANIMATION ---
   useEffect(() => {
@@ -298,6 +293,20 @@ const SilentShock = () => {
 
   return (
     <div className="relative min-h-screen w-full bg-[#EFEDE6] text-[#1A1A1A] font-serif overflow-x-hidden flex flex-col items-center">
+      {/* --- NEW: PAGE TRANSITION OVERLAY (Curtain Wipe) --- */}
+      <AnimatePresence>
+        {isNavigating && (
+          <motion.div
+            initial={{ scaleY: 0 }}
+            animate={{ scaleY: 1 }}
+            exit={{ scaleY: 0 }}
+            transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+            style={{ originY: 1 }} // Grows from bottom
+            className="fixed inset-0 bg-[#1A1A1A] z-[9999]"
+          />
+        )}
+      </AnimatePresence>
+
       {/* BG LAYERS */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
         <motion.div
@@ -450,34 +459,33 @@ const SilentShock = () => {
                     ))}
                   </div>
 
-                  {/* --- SCROLL TRANSITION AREA --- */}
+                  {/* --- NEW EXPLICIT TRANSITION AREA --- */}
                   <div className="relative w-full flex flex-col items-center pt-12 pb-32">
-                    {/* 1. Connector Line (Infinite height perception) */}
+                    {/* Connector Line */}
                     <motion.div
                       initial={{ height: 0 }}
-                      whileInView={{ height: 120 }}
+                      whileInView={{ height: 80 }}
                       viewport={{ once: true }}
                       transition={{ duration: 1.5, ease: "easeInOut" }}
-                      className="w-[1px] bg-[#1A1A1A]/20 mb-6"
+                      className="w-[1px] bg-[#1A1A1A]/20 mb-8"
                     />
 
-                    {/* 2. Scroll Prompt Text */}
-                    <p className="text-xl md:text-2xl italic font-serif text-[#1A1A1A]/60 mb-2 text-center">
+                    {/* CLICKABLE CTA BUTTON */}
+                    <motion.button
+                      onClick={handleNextChapter}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      className="group relative px-8 py-4 bg-[#1A1A1A] text-[#EFEDE6] rounded-full overflow-hidden shadow-2xl"
+                    >
+                      <div className="absolute inset-0 bg-[#BC4B28] translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
+                      <span className="relative z-10 font-mono text-xs font-bold uppercase tracking-[0.2em] flex items-center gap-3">
+                        Break the Cycle <span className="text-lg">→</span>
+                      </span>
+                    </motion.button>
+
+                    <p className="mt-6 text-sm italic font-serif text-[#1A1A1A]/50">
                       This is not irreversible.
                     </p>
-                    <p className="text-[10px] font-sans font-bold uppercase tracking-[0.2em] text-[#BC4B28] animate-pulse">
-                      Scroll to break the cycle
-                    </p>
-
-                    {/* 3. Loading/Progress Bar at bottom */}
-                    {redirecting && (
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: "100%" }}
-                        transition={{ duration: 0.8, ease: "easeInOut" }}
-                        className="fixed bottom-0 left-0 h-1 bg-[#BC4B28] z-50"
-                      />
-                    )}
                   </div>
                 </motion.div>
               )}
