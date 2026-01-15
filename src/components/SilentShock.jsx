@@ -6,8 +6,6 @@ import {
   useMotionValue,
   useTransform,
   animate,
-  // useScroll,  <-- REMOVED
-  // useMotionValueEvent, <-- REMOVED
 } from "framer-motion";
 
 // --- 1. TYPEWRITER COMPONENT ---
@@ -143,18 +141,17 @@ const SilentShock = () => {
   const canvasRef = useRef(null);
   const navigate = useNavigate();
 
-  // --- NEW TRANSITION STATE ---
+  // --- TRANSITION STATE ---
   const [isNavigating, setIsNavigating] = useState(false);
 
   const handleNextChapter = () => {
     setIsNavigating(true);
-    // Wait for animation (800ms) then navigate
     setTimeout(() => {
       navigate("/actions");
     }, 800);
   };
 
-  // --- CANVAS ANIMATION ---
+  // --- CANVAS ANIMATION (Background) ---
   useEffect(() => {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
@@ -293,7 +290,7 @@ const SilentShock = () => {
 
   return (
     <div className="relative min-h-screen w-full bg-[#EFEDE6] text-[#1A1A1A] font-serif overflow-x-hidden flex flex-col items-center">
-      {/* --- NEW: PAGE TRANSITION OVERLAY (Curtain Wipe) --- */}
+      {/* --- PAGE TRANSITION OVERLAY --- */}
       <AnimatePresence>
         {isNavigating && (
           <motion.div
@@ -301,7 +298,7 @@ const SilentShock = () => {
             animate={{ scaleY: 1 }}
             exit={{ scaleY: 0 }}
             transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-            style={{ originY: 1 }} // Grows from bottom
+            style={{ originY: 1 }}
             className="fixed inset-0 bg-[#1A1A1A] z-[9999]"
           />
         )}
@@ -333,7 +330,7 @@ const SilentShock = () => {
       />
       <div className="absolute inset-0 opacity-[0.12] z-[1] pointer-events-none mix-blend-multiply fixed bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
 
-      <main className="relative z-10 w-full max-w-7xl px-4 md:px-6 flex flex-col items-center pt-32 pb-32 min-h-screen justify-center">
+      <main className="relative z-10 w-full max-w-7xl px-4 md:px-6 flex flex-col items-center pt-32 pb-20 min-h-screen justify-center">
         {/* STEP 1 */}
         <AnimatePresence mode="wait">
           {step === 1 && (
@@ -373,7 +370,8 @@ const SilentShock = () => {
                     </p>
                   </div>
 
-                  <div className="flex flex-col lg:flex-row gap-4 mb-20 w-full">
+                  {/* CARDS CONTAINER (Reduced Margin Bottom) */}
+                  <div className="flex flex-col lg:flex-row gap-4 mb-8 w-full">
                     {stats.map((stat) => (
                       <motion.div
                         key={stat.id}
@@ -459,33 +457,41 @@ const SilentShock = () => {
                     ))}
                   </div>
 
-                  {/* --- NEW EXPLICIT TRANSITION AREA --- */}
-                  <div className="relative w-full flex flex-col items-center pt-12 pb-32">
-                    {/* Connector Line */}
-                    <motion.div
-                      initial={{ height: 0 }}
-                      whileInView={{ height: 80 }}
-                      viewport={{ once: true }}
-                      transition={{ duration: 1.5, ease: "easeInOut" }}
-                      className="w-[1px] bg-[#1A1A1A]/20 mb-8"
-                    />
-
-                    {/* CLICKABLE CTA BUTTON */}
-                    <motion.button
-                      onClick={handleNextChapter}
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      className="group relative px-8 py-4 bg-[#1A1A1A] text-[#EFEDE6] rounded-full overflow-hidden shadow-2xl"
-                    >
-                      <div className="absolute inset-0 bg-[#BC4B28] translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
-                      <span className="relative z-10 font-mono text-xs font-bold uppercase tracking-[0.2em] flex items-center gap-3">
-                        Break the Cycle <span className="text-lg">→</span>
-                      </span>
-                    </motion.button>
-
-                    <p className="mt-6 text-sm italic font-serif text-[#1A1A1A]/50">
+                  {/* --- COMPACT TRANSITION AREA --- */}
+                  <div className="relative w-full flex flex-col items-center py-8">
+                    {/* 1. Context Text moved ABOVE button */}
+                    <p className="text-xl md:text-2xl italic font-serif text-[#1A1A1A]/80 mb-6 text-center">
                       This is not irreversible.
                     </p>
+
+                    {/* 2. Bouncing Arrow for Direction */}
+                    <motion.div
+                      animate={{ y: [0, 5, 0] }}
+                      transition={{ duration: 1.5, repeat: Infinity }}
+                      className="mb-4 text-[#BC4B28]"
+                    >
+                      ↓
+                    </motion.div>
+
+                    {/* 3. High-Visibility CTA Button */}
+                    <motion.button
+                      onClick={handleNextChapter}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="group relative w-full md:w-auto px-10 py-5 bg-[#1A1A1A] text-[#EFEDE6] rounded-full overflow-hidden shadow-xl hover:shadow-2xl transition-all"
+                    >
+                      {/* Background Hover Fill */}
+                      <div className="absolute inset-0 bg-[#BC4B28] translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-in-out" />
+
+                      <div className="relative z-10 flex items-center justify-center gap-4">
+                        <span className="font-mono text-xs font-bold uppercase tracking-[0.25em]">
+                          Break the Cycle
+                        </span>
+                        <span className="text-lg group-hover:translate-x-1 transition-transform">
+                          →
+                        </span>
+                      </div>
+                    </motion.button>
                   </div>
                 </motion.div>
               )}
