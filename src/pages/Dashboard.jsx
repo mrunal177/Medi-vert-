@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo } from "react";
 import {
   BarChart,
   Bar,
@@ -12,6 +12,7 @@ import {
   CartesianGrid,
 } from "recharts";
 import { motion, AnimatePresence } from "framer-motion";
+import { useAuth } from "../auth/AuthContext";
 
 // ================= THEME CONFIG =================
 const COLORS = ["#4A5D23", "#BC4B28", "#2C5F58", "#1A1A1A"];
@@ -32,13 +33,13 @@ const GraphBackground = () => (
   </div>
 );
 
+// UPDATED STAMP: Tilted Right
 const Stamp = () => (
-  <div className="absolute -top-2 right-0 md:-top-4 md:right-10 border-[3px] border-[#BC4B28] p-2 rotate-[-12deg] opacity-30 pointer-events-none z-0 mix-blend-multiply mask-image">
-    <div className="border border-[#BC4B28] px-2 py-1">
-      <span className="font-mono font-bold text-xl md:text-2xl text-[#BC4B28] uppercase tracking-[0.2em] block text-center leading-none">
-        Confidential
-        <br />
-        <span className="text-sm md:text-base tracking-widest">Dossier</span>
+  // Added rotate-[12deg] and adjusted positioning slightly
+  <div className="absolute -top-8 right-2 md:-top-4 md:right-4 border-[2px] border-[#BC4B28] p-2 rotate-[-3eg] opacity-20 pointer-events-none z-0 mix-blend-multiply mask-image">
+    <div className="border border-[#BC4B28] px-4 py-1">
+      <span className="font-mono font-bold text-lg md:text-xl text-[#BC4B28] uppercase tracking-[0.3em] block text-center leading-none">
+        Confidential Dossier
       </span>
     </div>
   </div>
@@ -83,7 +84,7 @@ const HoverCard = ({ children, note, color, className = "" }) => {
   );
 };
 
-// ================= MODAL COMPONENT (Fixed Center) =================
+// ================= MODAL COMPONENT =================
 const LogEntryModal = ({ isOpen, onClose, onSubmit }) => {
   const [qty, setQty] = useState("");
   const [type, setType] = useState("pills");
@@ -97,7 +98,6 @@ const LogEntryModal = ({ isOpen, onClose, onSubmit }) => {
   };
 
   return (
-    // Fixed inset-0 ensures it covers the whole screen and centers content
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-[#1A1A1A]/80 backdrop-blur-sm p-4">
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -111,7 +111,6 @@ const LogEntryModal = ({ isOpen, onClose, onSubmit }) => {
         >
           ✕
         </button>
-
         <div className="mb-8 border-b border-[#1A1A1A]/10 pb-4">
           <span className="font-mono text-[10px] uppercase tracking-[0.2em] opacity-60">
             Field Ops
@@ -120,7 +119,6 @@ const LogEntryModal = ({ isOpen, onClose, onSubmit }) => {
             Log Disposal
           </h2>
         </div>
-
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label className="block font-mono text-[10px] uppercase tracking-widest opacity-50 mb-2">
@@ -166,10 +164,10 @@ const LogEntryModal = ({ isOpen, onClose, onSubmit }) => {
 // ================= DASHBOARD COMPONENT =================
 
 export default function Dashboard() {
+  const { user } = useAuth();
   const [isModalOpen, setModalOpen] = useState(false);
 
-  // --- 1. STATE: DATA ---
-  // Initial Mock Data (Will be replaced by Firebase fetch)
+  // --- STATE ---
   const [data, setData] = useState([
     {
       donationId: "d1",
@@ -191,20 +189,7 @@ export default function Dashboard() {
     },
   ]);
 
-  // --- FIREBASE FETCH HOOK (Place here later) ---
-  /*
-  useEffect(() => {
-    const fetchData = async () => {
-      // 1. const q = query(collection(db, "disposals"), where("userId", "==", user.uid));
-      // 2. const snapshot = await getDocs(q);
-      // 3. const fetchedData = snapshot.docs.map(doc => ({ ...doc.data(), donationId: doc.id }));
-      // 4. setData(fetchedData);
-    };
-    fetchData();
-  }, [user]);
-  */
-
-  // --- 2. CALCULATIONS (Memoized) ---
+  // --- CALCULATIONS ---
   const stats = useMemo(() => {
     let totalMedicines = 0;
     let totalWater = 0;
@@ -215,16 +200,14 @@ export default function Dashboard() {
     data.forEach((d) => {
       const count = d.medicineCount;
       totalMedicines += count;
-      totalWater += count * 25; // 25L per unit logic
-      totalScore += count * 5; // 5pts per unit logic
+      totalWater += count * 25;
+      totalScore += count * 5;
 
-      // Monthly Chart Data
       const month = new Date(d.timestamp).toLocaleString("default", {
         month: "short",
       });
       monthly[month] = (monthly[month] || 0) + count;
 
-      // Pie Chart Data
       Object.entries(d.medicineTypes).forEach(([t, c]) => {
         types[t] = (types[t] || 0) + c;
       });
@@ -242,43 +225,27 @@ export default function Dashboard() {
     };
   }, [data]);
 
-  // --- 3. ADD NEW DONATION (Firebase Write) ---
+  // --- ADD ENTRY ---
   const handleAddDonation = async (qty, type) => {
     const newEntry = {
-      donationId: `temp-${Date.now()}`, // Temporary ID until Firebase assigns one
+      donationId: `temp-${Date.now()}`,
       medicineCount: qty,
       medicineTypes: { [type]: qty },
       timestamp: new Date().toISOString(),
     };
-
-    // Optimistic UI Update (Update screen before backend confirms)
     setData((prev) => [newEntry, ...prev]);
     setModalOpen(false);
-
-    // --- FIREBASE WRITE LOGIC ---
-    /*
-    try {
-      await addDoc(collection(db, "disposals"), {
-        userId: user.uid,
-        medicineCount: qty,
-        medicineTypes: { [type]: qty },
-        timestamp: new Date().toISOString()
-      });
-      console.log("Sent to Firebase!");
-    } catch (e) {
-      console.error("Error adding document: ", e);
-    }
-    */
   };
 
   return (
-    <div className="min-h-screen bg-[#EFEDE6] text-[#1A1A1A] font-sans pt-32 pb-20 relative overflow-hidden">
+    <div className="min-h-screen bg-[#EFEDE6] text-[#1A1A1A] font-sans pt-24 pb-20 relative overflow-hidden">
       <GraphBackground />
 
       <main className="max-w-7xl mx-auto px-6 relative z-10">
         {/* --- HEADER --- */}
         <div className="mb-12 border-b border-[#1A1A1A]/20 pb-6 flex flex-col md:flex-row md:items-end justify-between gap-6 relative">
           <Stamp />
+
           <div className="relative z-10">
             <div className="inline-flex items-center gap-2 mb-2">
               <span className="w-2 h-2 rounded-full bg-[#4A5D23] animate-pulse" />
@@ -291,22 +258,17 @@ export default function Dashboard() {
             </h1>
           </div>
 
-          <div className="flex flex-col items-end gap-4 relative z-10">
-            <div className="text-right font-mono text-[10px] uppercase tracking-widest opacity-40">
-              <p>User: u1-Alpha</p>
-              <p>Status: Active</p>
-            </div>
-            {/* ACTION BUTTON */}
+          <div className="flex flex-col items-end gap-6 relative z-10">
             <button
               onClick={() => setModalOpen(true)}
-              className="bg-[#1A1A1A] text-[#EFEDE6] px-6 py-3 font-mono text-xs font-bold uppercase tracking-[0.15em] hover:bg-[#BC4B28] transition-colors shadow-lg"
+              className="bg-[#1A1A1A] text-[#EFEDE6] px-6 py-3 font-mono text-xs font-bold uppercase tracking-[0.15em] hover:bg-[#BC4B28] transition-colors shadow-lg rounded-[2px]"
             >
               + Log New Entry
             </button>
           </div>
         </div>
 
-        {/* --- KPI GRID (Clean 3 Cards) --- */}
+        {/* --- KPI GRID --- */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
           <KPICard
             label="Total Diverted"
@@ -403,7 +365,7 @@ export default function Dashboard() {
             </div>
           </HoverCard>
 
-          {/* PIE CHART (Donut Style) */}
+          {/* PIE CHART */}
           <HoverCard
             color="#BC4B28"
             note="Sorting helps us optimize the destruction process."
@@ -539,7 +501,7 @@ export default function Dashboard() {
         </div>
       </main>
 
-      {/* POPUP FORM (Fixed Center) */}
+      {/* POPUP FORM */}
       <AnimatePresence>
         {isModalOpen && (
           <LogEntryModal

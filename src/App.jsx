@@ -7,7 +7,8 @@ import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import PageTransition from "./components/PageTransition";
 import Login from "./components/Login";
-import ScrollToTop from "./components/ScrollToTop"; // <--- 1. IMPORT THIS
+import ScrollToTop from "./components/ScrollToTop";
+import ProtectedRoute from "./components/ProtectedRoute"; // <--- 1. ENSURE IMPORT
 
 // --- PAGES ---
 import SilentScene from "./components/SilentShock";
@@ -16,29 +17,23 @@ import Community from "./pages/Community";
 import Contribute from "./pages/contribute";
 import MapPage from "./pages/MapPage";
 import LearnPage from "./pages/LearnPage";
-import ProtectedRoute from "./components/ProtectedRoute";
 import Dashboard from "./pages/Dashboard";
-
-<Route
-  path="/dashboard"
-  element={
-    <ProtectedRoute>
-      <Dashboard />
-    </ProtectedRoute>
-  }
-/>
-
 
 function App() {
   const location = useLocation();
-  const hideNavbar = location.pathname === "/" || location.pathname === "/dashboard";
+
+  // FIX 1: Only hide Navbar on the landing page (SilentScene)
+  // Removed "/dashboard" from here so Navbar shows up now!
+  const hideNavbar = location.pathname === "/";
 
   const [showLogin, setShowLogin] = useState(false);
 
   return (
     <div className="w-screen min-h-screen overflow-x-hidden bg-[#EFEDE6]">
-      <ScrollToTop /> {/* <--- 2. PLACE IT HERE (Top of the tree) */}
+      <ScrollToTop />
+
       {!hideNavbar && <Navbar onLoginClick={() => setShowLogin(true)} />}
+
       <AnimatePresence mode="wait">
         <Routes location={location} key={location.pathname}>
           <Route
@@ -95,18 +90,23 @@ function App() {
             }
           />
 
-          {/* 🔥 DASHBOARD ROUTE */}
+          {/* FIX 2: DASHBOARD ROUTE IS NOW PROTECTED */}
           <Route
             path="/dashboard"
             element={
-              <PageTransition>
-                <Dashboard />
-              </PageTransition>
+              <ProtectedRoute>
+                <PageTransition>
+                  <Dashboard />
+                </PageTransition>
+              </ProtectedRoute>
             }
           />
         </Routes>
       </AnimatePresence>
-      <Footer />
+
+      {/* Hide Footer on Dashboard if you want a cleaner look, otherwise keep it */}
+      {location.pathname !== "/dashboard" && <Footer />}
+
       <Login isOpen={showLogin} onClose={() => setShowLogin(false)} />
     </div>
   );

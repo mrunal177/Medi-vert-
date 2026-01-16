@@ -6,7 +6,9 @@ import {
   GoogleAuthProvider,
   signInWithPopup,
 } from "firebase/auth";
-import { auth } from "../firebase";
+
+import { auth } from "../firebase/firebase";
+import { createUserIfNotExists } from "../firebase/userService";
 
 // --- ANIMATION VARIANTS ---
 const backdropVariants = {
@@ -39,11 +41,17 @@ export default function Login({ isOpen, onClose }) {
   const handleEmailAuth = async () => {
     setError("");
     try {
+      let userCred;
+
       if (isSignup) {
-        await createUserWithEmailAndPassword(auth, email, password);
+        userCred = await createUserWithEmailAndPassword(auth, email, password);
       } else {
-        await signInWithEmailAndPassword(auth, email, password);
+        userCred = await signInWithEmailAndPassword(auth, email, password);
       }
+
+      // 🔥 THIS IS THE BACKEND LINK (HERE, NOT AT BOTTOM)
+      await createUserIfNotExists(userCred.user);
+
       onClose();
       navigate("/dashboard");
     } catch (err) {
@@ -51,12 +59,17 @@ export default function Login({ isOpen, onClose }) {
     }
   };
 
+
   // GOOGLE LOGIN
   const handleGoogleLogin = async () => {
     setError("");
     try {
       const provider = new GoogleAuthProvider();
-      await signInWithPopup(auth, provider);
+      const result = await signInWithPopup(auth, provider);
+
+      // 🔥 BACKEND LINK (HERE)
+      await createUserIfNotExists(result.user);
+
       onClose();
       navigate("/dashboard");
     } catch (err) {
