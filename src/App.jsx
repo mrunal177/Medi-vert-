@@ -16,11 +16,22 @@ import Community from "./pages/Community";
 import Contribute from "./pages/contribute";
 import MapPage from "./pages/MapPage";
 import LearnPage from "./pages/LearnPage";
-import Dashboard from "./pages/Dashboard.jsx";
+import ProtectedRoute from "./components/ProtectedRoute";
+import Dashboard from "./pages/Dashboard";
+
+<Route
+  path="/dashboard"
+  element={
+    <ProtectedRoute>
+      <Dashboard />
+    </ProtectedRoute>
+  }
+/>
+
 
 function App() {
   const location = useLocation();
-  const hideNavbar = location.pathname === "/";
+  const hideNavbar = location.pathname === "/" || location.pathname === "/dashboard";
 
   const [showLogin, setShowLogin] = useState(false);
 
