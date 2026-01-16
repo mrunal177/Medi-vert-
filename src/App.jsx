@@ -16,12 +16,12 @@ import Community from "./pages/Community";
 import Contribute from "./pages/contribute";
 import MapPage from "./pages/MapPage";
 import LearnPage from "./pages/LearnPage";
+import Dashboard from "./pages/Dashboard.jsx";
 
 function App() {
   const location = useLocation();
   const hideNavbar = location.pathname === "/";
 
-  // --- STATE FOR LOGIN POPUP ---
   const [showLogin, setShowLogin] = useState(false);
 
   return (
@@ -84,13 +84,12 @@ function App() {
             }
           />
 
+          {/* 🔥 DASHBOARD ROUTE */}
           <Route
-            path="/login"
+            path="/dashboard"
             element={
               <PageTransition>
-                <div className="h-screen flex items-center justify-center font-serif text-[#1A1A1A]/50">
-                  Redirecting...
-                </div>
+                <Dashboard />
               </PageTransition>
             }
           />
