@@ -8,6 +8,23 @@ import {
 } from "firebase/auth";
 import { auth } from "../firebase";
 
+// --- ANIMATION VARIANTS ---
+const backdropVariants = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1 },
+};
+
+const modalVariants = {
+  hidden: { opacity: 0, y: 20, scale: 0.98 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: { type: "spring", stiffness: 300, damping: 25 },
+  },
+  exit: { opacity: 0, y: 20, scale: 0.98, transition: { duration: 0.2 } },
+};
+
 export default function Login({ isOpen, onClose }) {
   const navigate = useNavigate();
 
@@ -50,10 +67,7 @@ export default function Login({ isOpen, onClose }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur">
       <div className="bg-[#EFEDE6] p-8 rounded-2xl w-[380px] relative">
-        <button
-          className="absolute top-4 right-4 text-sm"
-          onClick={onClose}
-        >
+        <button className="absolute top-4 right-4 text-sm" onClick={onClose}>
           ✕
         </button>
 
@@ -77,9 +91,7 @@ export default function Login({ isOpen, onClose }) {
           onChange={(e) => setPassword(e.target.value)}
         />
 
-        {error && (
-          <p className="text-red-600 text-sm mb-3">{error}</p>
-        )}
+        {error && <p className="text-red-600 text-sm mb-3">{error}</p>}
 
         <button
           onClick={handleEmailAuth}
@@ -97,10 +109,7 @@ export default function Login({ isOpen, onClose }) {
 
         <p className="text-sm text-center">
           {isSignup ? "Already have an account?" : "New here?"}{" "}
-          <button
-            className="underline"
-            onClick={() => setIsSignup(!isSignup)}
-          >
+          <button className="underline" onClick={() => setIsSignup(!isSignup)}>
             {isSignup ? "Sign in" : "Create one"}
           </button>
         </p>
