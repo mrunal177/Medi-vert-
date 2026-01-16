@@ -13,6 +13,9 @@ import {
 } from "recharts";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../auth/AuthContext";
+import { getDashboardData } from "../firebase/dashboardService";
+import { logDisposal } from "../firebase/disposalService";
+import { useEffect } from "react";
 
 // ================= THEME CONFIG =================
 const COLORS = ["#4A5D23", "#BC4B28", "#2C5F58", "#1A1A1A"];
@@ -33,10 +36,8 @@ const GraphBackground = () => (
   </div>
 );
 
-// UPDATED STAMP: Tilted Right
 const Stamp = () => (
-  // Added rotate-[12deg] and adjusted positioning slightly
-  <div className="absolute -top-8 right-2 md:-top-4 md:right-4 border-[2px] border-[#BC4B28] p-2 rotate-[-3eg] opacity-20 pointer-events-none z-0 mix-blend-multiply mask-image">
+  <div className="absolute -top-8 right-2 md:-top-4 md:right-4 border-[2px] border-[#BC4B28] p-2 rotate-[-3deg] opacity-20 pointer-events-none z-0 mix-blend-multiply">
     <div className="border border-[#BC4B28] px-4 py-1">
       <span className="font-mono font-bold text-lg md:text-xl text-[#BC4B28] uppercase tracking-[0.3em] block text-center leading-none">
         Confidential Dossier
@@ -88,13 +89,24 @@ const HoverCard = ({ children, note, color, className = "" }) => {
 const LogEntryModal = ({ isOpen, onClose, onSubmit }) => {
   const [qty, setQty] = useState("");
   const [type, setType] = useState("pills");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (qty > 0) onSubmit(parseInt(qty), type);
-    setQty("");
+    if (qty && parseInt(qty) > 0) {
+      setIsSubmitting(true);
+      try {
+        await onSubmit(parseInt(qty), type);
+        setQty("");
+        setType("pills");
+      } catch (error) {
+        console.error("Error submitting entry:", error);
+      } finally {
+        setIsSubmitting(false);
+      }
+    }
   };
 
   return (
@@ -107,7 +119,8 @@ const LogEntryModal = ({ isOpen, onClose, onSubmit }) => {
       >
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-[#1A1A1A] hover:text-[#BC4B28] font-bold text-xl"
+          disabled={isSubmitting}
+          className="absolute top-4 right-4 text-[#1A1A1A] hover:text-[#BC4B28] font-bold text-xl disabled:opacity-50"
         >
           ✕
         </button>
@@ -130,8 +143,10 @@ const LogEntryModal = ({ isOpen, onClose, onSubmit }) => {
               value={qty}
               onChange={(e) => setQty(e.target.value)}
               autoFocus
-              className="w-full bg-white border border-[#1A1A1A]/20 p-4 font-serif text-xl focus:outline-none focus:border-[#4A5D23]"
+              disabled={isSubmitting}
+              className="w-full bg-white border border-[#1A1A1A]/20 p-4 font-serif text-xl focus:outline-none focus:border-[#4A5D23] disabled:opacity-50"
               placeholder="e.g. 15"
+              required
             />
           </div>
           <div>
@@ -141,7 +156,8 @@ const LogEntryModal = ({ isOpen, onClose, onSubmit }) => {
             <select
               value={type}
               onChange={(e) => setType(e.target.value)}
-              className="w-full bg-white border border-[#1A1A1A]/20 p-4 font-serif text-lg focus:outline-none focus:border-[#4A5D23]"
+              disabled={isSubmitting}
+              className="w-full bg-white border border-[#1A1A1A]/20 p-4 font-serif text-lg focus:outline-none focus:border-[#4A5D23] disabled:opacity-50"
             >
               <option value="pills">Pills / Tablets</option>
               <option value="syrups">Liquids / Syrups</option>
@@ -151,9 +167,10 @@ const LogEntryModal = ({ isOpen, onClose, onSubmit }) => {
           </div>
           <button
             type="submit"
-            className="w-full py-4 mt-4 bg-[#1A1A1A] text-[#EFEDE6] font-mono text-xs font-bold uppercase tracking-[0.2em] hover:bg-[#BC4B28] transition-colors"
+            disabled={isSubmitting}
+            className="w-full py-4 mt-4 bg-[#1A1A1A] text-[#EFEDE6] font-mono text-xs font-bold uppercase tracking-[0.2em] hover:bg-[#BC4B28] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Confirm Entry
+            {isSubmitting ? "Processing..." : "Confirm Entry"}
           </button>
         </form>
       </motion.div>
@@ -166,28 +183,39 @@ const LogEntryModal = ({ isOpen, onClose, onSubmit }) => {
 export default function Dashboard() {
   const { user } = useAuth();
   const [isModalOpen, setModalOpen] = useState(false);
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  // --- STATE ---
-  const [data, setData] = useState([
-    {
-      donationId: "d1",
-      medicineCount: 12,
-      medicineTypes: { pills: 6, syrups: 3, ointments: 3 },
-      timestamp: "2025-01-12",
-    },
-    {
-      donationId: "d2",
-      medicineCount: 8,
-      medicineTypes: { pills: 4, syrups: 2, injectables: 2 },
-      timestamp: "2025-02-05",
-    },
-    {
-      donationId: "d3",
-      medicineCount: 15,
-      medicineTypes: { pills: 10, syrups: 5 },
-      timestamp: "2025-03-18",
-    },
-  ]);
+  // --- FETCH DASHBOARD DATA ---
+  const fetchDashboard = async () => {
+    try {
+      if (!user?.uid) {
+        console.log("No user logged in");
+        return;
+      }
+
+      setLoading(true);
+      const result = await getDashboardData(user.uid);
+      console.log("Dashboard data fetched:", result);
+
+      // ✅ FIX: Use the disposals array from the result object
+      const disposals = result?.disposals || [];
+      console.log("Setting data with disposals:", disposals.length);
+      setData(disposals);
+    } catch (error) {
+      console.error("Error fetching dashboard:", error);
+      setData([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // --- FETCH ON LOGIN / REFRESH ---
+  useEffect(() => {
+    if (user?.uid) {
+      fetchDashboard();
+    }
+  }, [user?.uid]);
 
   // --- CALCULATIONS ---
   const stats = useMemo(() => {
@@ -198,17 +226,25 @@ export default function Dashboard() {
     const types = {};
 
     data.forEach((d) => {
-      const count = d.medicineCount;
+      const count = d.medicineCount || 0;
       totalMedicines += count;
       totalWater += count * 25;
       totalScore += count * 5;
 
-      const month = new Date(d.timestamp).toLocaleString("default", {
-        month: "short",
-      });
-      monthly[month] = (monthly[month] || 0) + count;
+      // ✅ FIX: Safely parse timestamp
+      try {
+        const date = d.timestamp?.toDate?.() || new Date(d.timestamp);
+        const month = date.toLocaleString("default", {
+          month: "short",
+        });
+        monthly[month] = (monthly[month] || 0) + count;
+      } catch (e) {
+        console.error("Error parsing date:", e);
+      }
 
-      Object.entries(d.medicineTypes).forEach(([t, c]) => {
+      // ✅ FIX: Handle medicineTypes safely
+      const typeData = d.medicineTypes || {};
+      Object.entries(typeData).forEach(([t, c]) => {
         types[t] = (types[t] || 0) + c;
       });
     });
@@ -225,17 +261,43 @@ export default function Dashboard() {
     };
   }, [data]);
 
-  // --- ADD ENTRY ---
+  // --- ADD ENTRY (SUBMIT HANDLER) ---
   const handleAddDonation = async (qty, type) => {
-    const newEntry = {
-      donationId: `temp-${Date.now()}`,
-      medicineCount: qty,
-      medicineTypes: { [type]: qty },
-      timestamp: new Date().toISOString(),
-    };
-    setData((prev) => [newEntry, ...prev]);
-    setModalOpen(false);
+    try {
+      if (!user?.uid) {
+        alert("Please log in first");
+        return;
+      }
+
+      console.log("Submitting disposal:", { qty, type, userId: user.uid });
+
+      // 1️⃣ Save data to Firestore
+      await logDisposal({
+        userId: user.uid,
+        medicineCount: qty,
+        medicineType: type,
+      });
+
+      console.log("Disposal logged successfully");
+
+      // 2️⃣ RELOAD DASHBOARD DATA
+      await fetchDashboard();
+
+      // 3️⃣ Close modal
+      setModalOpen(false);
+    } catch (error) {
+      console.error("Error adding donation:", error);
+      alert("Error saving entry. Check console for details.");
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#EFEDE6] text-[#1A1A1A] flex items-center justify-center">
+        <div className="font-serif text-xl opacity-60">Loading dashboard...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#EFEDE6] text-[#1A1A1A] font-sans pt-24 pb-20 relative overflow-hidden">
@@ -279,12 +341,13 @@ export default function Dashboard() {
             note="Toxic units kept out of landfills."
           />
           <KPICard
-            label="Water Saved"
-            value={stats.totalWater}
-            unit="Liters"
+            label="Aquatic Protection"
+            value={stats.totalMedicines}
+            unit="Units"
+            secondaryValue={`${(stats.totalMedicines * 0.5).toFixed(1)} ng/L`}
             color="#2C5F58"
             icon="💧"
-            note="Groundwater protected from pharmaceutical leaching."
+            note="Pharmaceutical contamination prevented from entering aquatic ecosystems."
           />
           <KPICard
             label="Impact Score"
@@ -455,48 +518,54 @@ export default function Dashboard() {
               <h3 className="font-serif text-2xl mt-1">Recent Logs</h3>
             </div>
             <div className="font-mono text-[10px] uppercase tracking-widest opacity-40">
-              Verified Entries
+              Verified Entries ({data.length})
             </div>
           </div>
           <div className="divide-y divide-[#1A1A1A]/5">
-            {data.map((d) => (
-              <div
-                key={d.donationId}
-                className="py-4 flex flex-col md:flex-row md:items-center justify-between group hover:bg-[#F9F9F9] -mx-4 px-4 transition-colors rounded"
-              >
-                <div className="flex items-center gap-4 mb-2 md:mb-0">
-                  <div className="w-10 h-10 rounded-full bg-[#EFEDE6] flex items-center justify-center font-serif text-lg text-[#1A1A1A]/60 group-hover:bg-[#BC4B28] group-hover:text-white transition-colors">
-                    ✓
-                  </div>
-                  <div>
-                    <p className="font-serif text-lg text-[#1A1A1A]">
-                      {d.medicineCount} Items
-                    </p>
-                    <p className="font-mono text-[10px] uppercase tracking-widest opacity-40">
-                      ID: {d.donationId}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-8 pl-14 md:pl-0">
-                  <div className="text-right">
-                    <span className="block font-mono text-[9px] uppercase tracking-widest opacity-40">
-                      Impact
-                    </span>
-                    <span className="font-bold text-[#BC4B28]">
-                      {d.medicineCount * 5} PTS
-                    </span>
-                  </div>
-                  <div className="text-right">
-                    <span className="block font-mono text-[9px] uppercase tracking-widest opacity-40">
-                      Date
-                    </span>
-                    <span className="font-sans text-sm opacity-80">
-                      {new Date(d.timestamp).toLocaleDateString()}
-                    </span>
-                  </div>
-                </div>
+            {data.length === 0 ? (
+              <div className="py-8 text-center text-[#1A1A1A]/50 font-serif">
+                No entries yet. Log your first disposal!
               </div>
-            ))}
+            ) : (
+              data.map((d) => (
+                <div
+                  key={d.donationId}
+                  className="py-4 flex flex-col md:flex-row md:items-center justify-between group hover:bg-[#F9F9F9] -mx-4 px-4 transition-colors rounded"
+                >
+                  <div className="flex items-center gap-4 mb-2 md:mb-0">
+                    <div className="w-10 h-10 rounded-full bg-[#EFEDE6] flex items-center justify-center font-serif text-lg text-[#1A1A1A]/60 group-hover:bg-[#BC4B28] group-hover:text-white transition-colors">
+                      ✓
+                    </div>
+                    <div>
+                      <p className="font-serif text-lg text-[#1A1A1A]">
+                        {d.medicineCount} Items
+                      </p>
+                      <p className="font-mono text-[10px] uppercase tracking-widest opacity-40">
+                        ID: {d.donationId}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-8 pl-14 md:pl-0">
+                    <div className="text-right">
+                      <span className="block font-mono text-[9px] uppercase tracking-widest opacity-40">
+                        Impact
+                      </span>
+                      <span className="font-bold text-[#BC4B28]">
+                        {d.medicineCount * 5} PTS
+                      </span>
+                    </div>
+                    <div className="text-right">
+                      <span className="block font-mono text-[9px] uppercase tracking-widest opacity-40">
+                        Date
+                      </span>
+                      <span className="font-sans text-sm opacity-80">
+                        {new Date(d.timestamp?.toDate?.() || d.timestamp).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </main>
@@ -516,7 +585,7 @@ export default function Dashboard() {
 }
 
 // --- KPI SUB-COMPONENT ---
-function KPICard({ label, value, unit, color, note, icon }) {
+function KPICard({ label, value, unit, secondaryValue, color, note, icon }) {
   return (
     <HoverCard
       color={color}
@@ -541,6 +610,16 @@ function KPICard({ label, value, unit, color, note, icon }) {
             {unit}
           </span>
         </div>
+        {secondaryValue && (
+          <div className="mt-3 pt-3 border-t border-[#1A1A1A]/5">
+            <p className="font-mono text-[10px] uppercase tracking-widest opacity-40 mb-1">
+              Contamination Prevented
+            </p>
+            <span className="font-serif text-lg font-medium" style={{ color: color }}>
+              {secondaryValue}
+            </span>
+          </div>
+        )}
       </div>
     </HoverCard>
   );
