@@ -2,6 +2,8 @@ import { db } from "./firebase";
 import {
   collection,
   addDoc,
+  deleteDoc, // <--- IMPORTED
+  doc, // <--- IMPORTED
   query,
   orderBy,
   onSnapshot,
@@ -47,4 +49,16 @@ export const subscribeToPosts = (callback) => {
     }));
     callback(posts);
   });
+};
+
+// 3. Function to Delete a Post
+export const deletePost = async (postId) => {
+  try {
+    const postRef = doc(db, COLLECTION_NAME, postId);
+    await deleteDoc(postRef);
+    return { success: true };
+  } catch (error) {
+    console.error("Error deleting post:", error);
+    throw error;
+  }
 };
