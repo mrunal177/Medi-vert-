@@ -1,7 +1,10 @@
-import React, { useState } from "react";
-import { Routes, Route, useLocation } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { Routes, Route, useLocation, useNavigate } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 import { APIProvider } from "@vis.gl/react-google-maps";
+import { getRedirectResult } from "firebase/auth";
+import { auth } from "./firebase/firebase";
+import { createUserIfNotExists } from "./firebase/userService";
 
 // --- COMPONENTS ---
 import Navbar from "./components/Navbar";
@@ -23,11 +26,28 @@ import Dashboard from "./pages/Dashboard";
 
 function App() {
   const location = useLocation();
+  const navigate = useNavigate();
 
   // FIX 1: Only hide Navbar on the landing page (SilentScene)
   // Removed "/dashboard" from here so Navbar shows up now!
   const hideNavbar = location.pathname === "/";
   const [showLogin, setShowLogin] = useState(false);
+
+  // Check for Google redirect result on app load
+  useEffect(() => {
+    const checkRedirectResult = async () => {
+      try {
+        const result = await getRedirectResult(auth);
+        if (result && result.user) {
+          await createUserIfNotExists(result.user);
+          navigate("/dashboard");
+        }
+      } catch (err) {
+        console.error("Redirect sign-in error:", err);
+      }
+    };
+    checkRedirectResult();
+  }, [navigate]);
 
   return (
     <APIProvider

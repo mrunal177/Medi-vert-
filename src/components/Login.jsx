@@ -4,28 +4,11 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   GoogleAuthProvider,
-  signInWithPopup,
+  signInWithPopup, // <--- CHANGED: Import Popup instead of Redirect
 } from "firebase/auth";
 
 import { auth } from "../firebase/firebase";
 import { createUserIfNotExists } from "../firebase/userService";
-
-// --- ANIMATION VARIANTS ---
-const backdropVariants = {
-  hidden: { opacity: 0 },
-  visible: { opacity: 1 },
-};
-
-const modalVariants = {
-  hidden: { opacity: 0, y: 20, scale: 0.98 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    scale: 1,
-    transition: { type: "spring", stiffness: 300, damping: 25 },
-  },
-  exit: { opacity: 0, y: 20, scale: 0.98, transition: { duration: 0.2 } },
-};
 
 export default function Login({ isOpen, onClose }) {
   const navigate = useNavigate();
@@ -34,12 +17,14 @@ export default function Login({ isOpen, onClose }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   if (!isOpen) return null;
 
-  // EMAIL LOGIN / SIGNUP
+  // --- EMAIL LOGIN / SIGNUP ---
   const handleEmailAuth = async () => {
     setError("");
+    setIsLoading(true); // Good practice to show loading state here too
     try {
       let userCred;
 
@@ -49,49 +34,73 @@ export default function Login({ isOpen, onClose }) {
         userCred = await signInWithEmailAndPassword(auth, email, password);
       }
 
-      // 🔥 THIS IS THE BACKEND LINK (HERE, NOT AT BOTTOM)
+      // Create user in DB
       await createUserIfNotExists(userCred.user);
 
+      // Redirect
       onClose();
       navigate("/dashboard");
     } catch (err) {
+      console.error("Email Auth Error:", err);
       setError(err.message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-
-  // GOOGLE LOGIN
+  // --- GOOGLE LOGIN (FIXED) ---
   const handleGoogleLogin = async () => {
     setError("");
+    setIsLoading(true);
+
     try {
       const provider = new GoogleAuthProvider();
+      provider.addScope("profile");
+      provider.addScope("email");
+
+      // ✅ 1. Use Popup. This keeps the browser open so code continues running.
       const result = await signInWithPopup(auth, provider);
 
-      // 🔥 BACKEND LINK (HERE)
+      // ✅ 2. Create User in DB (Important for Google users too!)
       await createUserIfNotExists(result.user);
 
+      // ✅ 3. Redirect manually since we are still on the page
+      console.log("Google Login Success, redirecting...");
       onClose();
       navigate("/dashboard");
     } catch (err) {
-      setError(err.message);
+      console.error("Google sign-in error:", err);
+
+      if (err.code === "auth/popup-closed-by-user") {
+        setError("Sign-in cancelled.");
+      } else if (err.code === "auth/cancelled-popup-request") {
+        // Ignore multiple clicks
+      } else {
+        setError(err.message || "Failed to sign in with Google.");
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur">
-      <div className="bg-[#EFEDE6] p-8 rounded-2xl w-[380px] relative">
-        <button className="absolute top-4 right-4 text-sm" onClick={onClose}>
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur">
+      <div className="bg-[#EFEDE6] p-8 rounded-2xl w-[380px] relative shadow-2xl">
+        <button
+          className="absolute top-4 right-4 text-xl font-bold opacity-50 hover:opacity-100"
+          onClick={onClose}
+        >
           ✕
         </button>
 
-        <h2 className="text-2xl font-serif mb-4">
+        <h2 className="text-2xl font-serif mb-4 text-[#1A1A1A]">
           {isSignup ? "Create Account" : "Sign In"}
         </h2>
 
         <input
           type="email"
           placeholder="Email"
-          className="w-full mb-3 p-3 rounded border"
+          className="w-full mb-3 p-3 rounded border border-gray-300 focus:outline-none focus:border-[#BC4B28]"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
@@ -99,30 +108,71 @@ export default function Login({ isOpen, onClose }) {
         <input
           type="password"
           placeholder="Password"
-          className="w-full mb-4 p-3 rounded border"
+          className="w-full mb-4 p-3 rounded border border-gray-300 focus:outline-none focus:border-[#BC4B28]"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
 
-        {error && <p className="text-red-600 text-sm mb-3">{error}</p>}
+        {error && (
+          <p className="text-red-600 text-sm mb-3 font-medium">{error}</p>
+        )}
 
         <button
           onClick={handleEmailAuth}
-          className="w-full bg-black text-white py-3 rounded mb-3"
+          disabled={isLoading}
+          className="w-full bg-[#1A1A1A] text-white py-3 rounded mb-3 font-medium hover:bg-black transition-colors disabled:opacity-50"
         >
-          {isSignup ? "Create Account" : "Authenticate"}
+          {isLoading
+            ? "Processing..."
+            : isSignup
+              ? "Create Account"
+              : "Authenticate"}
         </button>
+
+        <div className="relative my-4">
+          <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t border-gray-300" />
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-[#EFEDE6] px-2 text-gray-500">
+              Or continue with
+            </span>
+          </div>
+        </div>
 
         <button
           onClick={handleGoogleLogin}
-          className="w-full bg-white border py-3 rounded mb-4"
+          disabled={isLoading}
+          className="w-full bg-white border border-gray-300 text-gray-700 py-3 rounded mb-4 font-medium hover:bg-gray-50 transition-colors flex items-center justify-center gap-2"
         >
-          Sign in with Google
+          {/* Simple Google G Icon */}
+          <svg className="w-5 h-5" viewBox="0 0 24 24">
+            <path
+              d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+              fill="#4285F4"
+            />
+            <path
+              d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+              fill="#34A853"
+            />
+            <path
+              d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.26-.19-.58z"
+              fill="#FBBC05"
+            />
+            <path
+              d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+              fill="#EA4335"
+            />
+          </svg>
+          {isLoading ? "Signing in..." : "Google"}
         </button>
 
-        <p className="text-sm text-center">
+        <p className="text-sm text-center text-gray-600">
           {isSignup ? "Already have an account?" : "New here?"}{" "}
-          <button className="underline" onClick={() => setIsSignup(!isSignup)}>
+          <button
+            className="underline font-bold text-[#1A1A1A]"
+            onClick={() => setIsSignup(!isSignup)}
+          >
             {isSignup ? "Sign in" : "Create one"}
           </button>
         </p>

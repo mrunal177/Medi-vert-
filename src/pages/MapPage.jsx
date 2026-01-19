@@ -63,10 +63,8 @@ const MapPage = () => {
   return (
     <APIProvider apiKey={API_KEY} libraries={["places"]}>
       <div className="flex h-screen w-full bg-[#EFEDE6] overflow-hidden">
-
         {/* ================= SIDEBAR CONTAINER ================= */}
         <div className="relative w-[420px] h-full bg-[#EFEDE6] px-8 pt-24 pb-6 overflow-y-auto">
-
           {/* Badge */}
           <div className="mb-4">
             <div className="inline-flex items-center gap-2 border border-[#BC4B28]/30 px-3 py-1 rounded-full bg-white/50">
@@ -83,7 +81,8 @@ const MapPage = () => {
           </h1>
 
           <p className="text-sm text-[#1A1A1A]/70 mb-6 leading-relaxed max-w-xs">
-            Verified locations accepting unused medicines to prevent soil & water contamination.
+            Verified locations accepting unused medicines to prevent soil &
+            water contamination.
           </p>
 
           {/* Cards */}
@@ -92,10 +91,11 @@ const MapPage = () => {
               <div
                 key={place.id}
                 onClick={() => setSelectedPlace(place)}
-                className={`bg-white rounded-[18px] p-6 cursor-pointer transition-all ${selectedPlace?.id === place.id
-                  ? "shadow-xl scale-[1.02]"
-                  : "shadow-sm hover:shadow-md"
-                  }`}
+                className={`bg-white rounded-[18px] p-6 cursor-pointer transition-all ${
+                  selectedPlace?.id === place.id
+                    ? "shadow-xl scale-[1.02]"
+                    : "shadow-sm hover:shadow-md"
+                }`}
               >
                 <div className="flex justify-between items-start mb-3">
                   <div>
@@ -123,7 +123,7 @@ const MapPage = () => {
                       e.stopPropagation();
                       window.open(
                         `https://www.google.com/maps/search/?api=1&query=${place.position.lat},${place.position.lng}`,
-                        "_blank"
+                        "_blank",
                       );
                     }}
                     className="text-xs font-bold text-[#BC4B28] hover:underline"
@@ -138,11 +138,8 @@ const MapPage = () => {
 
         {/* ================= MAP CONTAINER ================= */}
         <div className="flex-1 relative">
-
           {/* 🔥 NAVBAR ONLY FOR MAP */}
-          <div className="absolute top-0 left-0 right-0 z-[1000]">
-            <Navbar />
-          </div>
+          <div className="absolute top-0 left-0 right-0 z-[1000]"></div>
 
           <Map
             defaultCenter={userLocation}

@@ -2,3 +2,12 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Ensure text is visible by default */
+body {
+  color: #1A1A1A;
+}
+
+#root {
+  color: #1A1A1A;
+}
