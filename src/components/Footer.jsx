@@ -29,7 +29,7 @@ export default function Footer() {
               <span className="font-mono text-[9px] uppercase tracking-[0.2em] opacity-30 block mb-3">
                 Architects
               </span>
-              <ul className="grid grid-cols-2 gap-x-8 gap-y-1 text-xs font-serif opacity-80">
+              <ul className="grid grid-cols-2 gap-x-8 gap-y-1 text-s font-serif opacity-80">
                 <li className="hover:text-[#4A5D23] cursor-default">Mrunal</li>
                 <li className="hover:text-[#4A5D23] cursor-default">Avni</li>
                 <li className="hover:text-[#4A5D23] cursor-default">Sawani</li>
@@ -51,7 +51,7 @@ export default function Footer() {
               </div>
               <div className="mt-2 text-right">
                 <a
-                  href="mailto:contact@medivert.org"
+                  href="mailto:habitz19.23@gmail.com"
                   className="text-[10px] font-mono opacity-40 hover:text-[#BC4B28] transition-colors"
                 >
                   contact@medivert.org
