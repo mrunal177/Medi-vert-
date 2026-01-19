@@ -15,7 +15,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../auth/AuthContext";
 import { getDashboardData } from "../firebase/dashboardService";
 import { logDisposal } from "../firebase/disposalService";
-import { subscribeToPosts } from "../firebase/postService"; // 1. IMPORT THIS
+import { subscribeToPosts, deletePost } from "../firebase/postService"; // <--- IMPORT deletePost
 
 // ================= THEME CONFIG =================
 const COLORS = ["#4A5D23", "#BC4B28", "#2C5F58", "#1A1A1A"];
@@ -216,13 +216,29 @@ export default function Dashboard() {
     }
   }, [user?.uid]);
 
-  // 3. SUBSCRIBE TO POSTS
+  // 3. SUBSCRIBE TO POSTS (FILTERED BY CURRENT USER)
   useEffect(() => {
-    const unsubscribe = subscribeToPosts((posts) => {
-      setCommunityPosts(posts.slice(0, 3)); // Only show top 3 recent posts
+    if (!user?.uid) return;
+
+    const unsubscribe = subscribeToPosts((allPosts) => {
+      // ✅ FILTER: Only keep posts where post.uid matches current user.uid
+      const myPosts = allPosts.filter((post) => post.uid === user.uid);
+      setCommunityPosts(myPosts.slice(0, 3)); // Show top 3 of MY recent posts
     });
     return () => unsubscribe();
-  }, []);
+  }, [user?.uid]);
+
+  // 4. DELETE HANDLER
+  const handleDeletePost = async (postId) => {
+    if (window.confirm("Are you sure you want to delete this story?")) {
+      try {
+        await deletePost(postId);
+        // UI updates automatically due to the realtime listener in useEffect
+      } catch (error) {
+        alert("Failed to delete post. Please try again.");
+      }
+    }
+  };
 
   // --- CALCULATIONS ---
   const stats = useMemo(() => {
@@ -570,7 +586,7 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* 4. RIGHT: COMMUNITY UPDATES */}
+          {/* 4. RIGHT: USER'S POSTS (MY CONTRIBUTIONS) */}
           <div className="bg-[#EFEDE6] border border-[#BC4B28]/20 rounded-[4px] p-8 relative overflow-hidden h-full">
             {/* Background Accent */}
             <div className="absolute top-0 right-0 w-32 h-32 bg-[#BC4B28]/5 rounded-full blur-3xl pointer-events-none" />
@@ -578,10 +594,10 @@ export default function Dashboard() {
             <div className="flex justify-between items-end mb-8 border-b border-[#BC4B28]/10 pb-4 relative z-10">
               <div>
                 <h2 className="font-mono text-xs font-bold uppercase tracking-[0.2em] text-[#BC4B28]/60">
-                  Network
+                  Personal Archive
                 </h2>
                 <h3 className="font-serif text-2xl mt-1 text-[#1A1A1A]">
-                  Community Pulse
+                  My Contributions
                 </h3>
               </div>
               <div className="w-2 h-2 rounded-full bg-[#BC4B28] animate-pulse" />
@@ -590,17 +606,38 @@ export default function Dashboard() {
             <div className="space-y-4 relative z-10">
               {communityPosts.length === 0 ? (
                 <div className="text-center py-8 opacity-50 font-serif text-sm">
-                  Connecting to secure channel...
+                  You haven't posted any stories yet.
                 </div>
               ) : (
                 communityPosts.map((post) => (
                   <div
                     key={post.id}
-                    className="bg-white p-5 rounded-lg border border-[#1A1A1A]/5 shadow-sm hover:shadow-md transition-all"
+                    className="group relative bg-white p-5 rounded-lg border border-[#1A1A1A]/5 shadow-sm hover:shadow-md transition-all"
                   >
+                    {/* --- DELETE BUTTON (Visible on Hover) --- */}
+                    <button
+                      onClick={() => handleDeletePost(post.id)}
+                      className="absolute top-3 right-3 p-2 rounded-full bg-red-50 text-red-600 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-100"
+                      title="Delete Post"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="w-4 h-4"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <polyline points="3 6 5 6 21 6"></polyline>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                      </svg>
+                    </button>
+
                     <div className="flex items-center gap-2 mb-2">
                       <span className="px-2 py-0.5 rounded bg-[#BC4B28]/10 text-[#BC4B28] text-[9px] font-bold uppercase tracking-wider">
-                        {post.tag || "Update"}
+                        {post.tag || "Story"}
                       </span>
                       <span className="text-[10px] font-mono opacity-40">
                         {new Date(
@@ -608,7 +645,7 @@ export default function Dashboard() {
                         ).toLocaleDateString()}
                       </span>
                     </div>
-                    <h4 className="font-serif font-bold text-lg leading-tight mb-2">
+                    <h4 className="font-serif font-bold text-lg leading-tight mb-2 pr-8">
                       {post.title}
                     </h4>
                     <p className="text-xs font-sans text-[#1A1A1A]/70 line-clamp-2 leading-relaxed">
