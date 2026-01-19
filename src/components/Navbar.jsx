@@ -75,7 +75,7 @@ const Navbar = ({ onLoginClick }) => {
           <div className="max-w-7xl mx-auto flex justify-between items-center">
             {/* --- LOGO --- */}
             <Link
-              to="/"
+              to="/actions"
               className="text-2xl font-serif font-bold tracking-tighter text-[#1A1A1A] hover:text-[#BC4B28] transition-colors"
             >
               MediVert<span className="text-[#BC4B28]">.</span>
