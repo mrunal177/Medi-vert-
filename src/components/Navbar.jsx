@@ -78,7 +78,7 @@ const Navbar = ({ onLoginClick }) => {
           <div className="w-full max-w-5xl bg-[#EFEDE6]/90 backdrop-blur-xl border border-white/40 rounded-full shadow-2xl px-6 py-3 flex justify-between items-center transition-all hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
             {/* --- LOGO --- */}
             <Link
-              to="/"
+              to="/actions"
               className="text-2xl font-serif font-bold tracking-tighter text-[#1A1A1A] hover:text-[#BC4B28] transition-colors pl-2"
             >
               MediVert<span className="text-[#BC4B28]">.</span>
