@@ -1,7 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useAuth } from "../auth/AuthContext"; // 1. Import Auth
+import { subscribeToPosts } from "../firebase/postService"; // 2. Import Service
+import CreatePost from "../components/CreatePost"; // 3. Import Modal
 
-// --- ANIMATION VARIANTS FOR BG ---
+// --- ANIMATION VARIANTS (Keep your existing variants) ---
 const blobVariant = {
   animate: {
     scale: [1, 1.15, 0.9, 1],
@@ -17,57 +20,35 @@ const blobVariant = {
   },
 };
 
-// --- DATA ---
-const stories = [
+// --- STATIC DATA (Keep as fallback or initial data) ---
+const initialStories = [
   {
-    id: 1,
+    id: "static-1",
     author: "Priya M.",
     role: "Home Organizer",
     date: "Dec 28, 2025",
     tag: "Experience",
     title: "How I cleared out 5 years of expired medicines",
-    preview:
-      "I had no idea how many unused medicines had accumulated in my cabinet until I decided to organize them. The local pharmacy accepted everything...",
+    preview: "I had no idea how many unused medicines had accumulated...",
     color: "#BC4B28",
   },
-  {
-    id: 2,
-    author: "Rahul K.",
-    role: "Student",
-    date: "Dec 25, 2025",
-    tag: "Impact",
-    title: "Teaching my parents about safe disposal",
-    preview:
-      "Growing up, we always flushed expired medicines down the drain. When I learned about the environmental impact, I knew I had to share this with my family...",
-    color: "#4A5D23",
-  },
-  {
-    id: 3,
-    author: "Sarah J.",
-    role: "Volunteer",
-    date: "Dec 20, 2025",
-    tag: "Guide",
-    title: "What happens to the pills you drop off?",
-    preview:
-      "Ever wondered where the medicines go? I visited a disposal facility last week and learned about the high-temperature incineration process...",
-    color: "#2C5F58",
-  },
+  // ... keep your other static stories if you want mixed content
 ];
 
 const tips = [
   {
     id: 1,
-    text: "Keep a small box near your medicine cabinet for expired medicines.",
+    text: "Keep a small box near your medicine cabinet...",
     author: "Anjali D.",
   },
   {
     id: 2,
-    text: "Check expiry dates before buying new strips to avoid waste.",
+    text: "Check expiry dates before buying new strips...",
     author: "Dr. Sharma",
   },
 ];
 
-// --- SUBTLE MARQUEE COMPONENT ---
+// --- SUBTLE MARQUEE (Keep as is) ---
 const SubtleMarquee = () => {
   return (
     <div className="relative w-full overflow-hidden border-y border-[#1A1A1A]/5 py-4 bg-[#EFEDE6]/50 backdrop-blur-sm mb-12">
@@ -85,11 +66,6 @@ const SubtleMarquee = () => {
             <span className="text-[10px] font-sans font-bold uppercase tracking-[0.25em] text-[#1A1A1A]">
               Shared Impact
             </span>
-            <span className="w-1 h-1 rounded-full bg-[#4A5D23]" />
-            <span className="text-[10px] font-sans font-bold uppercase tracking-[0.25em] text-[#1A1A1A]">
-              Safe Disposal Network
-            </span>
-            <span className="w-1 h-1 rounded-full bg-[#2C5F58]" />
           </div>
         ))}
       </motion.div>
@@ -97,12 +73,44 @@ const SubtleMarquee = () => {
   );
 };
 
-// 1. Accept the onWriteClick prop here 👇
 const Community = ({ onWriteClick }) => {
+  const { user } = useAuth(); // Get current user
   const [activeTab, setActiveTab] = useState("stories");
+  const [realPosts, setRealPosts] = useState([]); // State for Firebase posts
+  const [isPostModalOpen, setIsPostModalOpen] = useState(false);
+
+  // Fetch posts from Firebase
+  useEffect(() => {
+    const unsubscribe = subscribeToPosts((fetchedPosts) => {
+      setRealPosts(fetchedPosts);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Combine Real + Static posts
+  const allStories = [...realPosts, ...initialStories];
+
+  // Logic: If logged in -> Open Post Modal. If not -> Open Login (via App.jsx)
+  const handleShareClick = () => {
+    if (user) {
+      setIsPostModalOpen(true);
+    } else {
+      onWriteClick(); // This opens the Login modal from App.jsx
+    }
+  };
 
   return (
     <section className="relative min-h-screen w-full bg-[#EFEDE6] text-[#1A1A1A] font-serif overflow-hidden pt-32">
+      {/* Post Modal */}
+      <AnimatePresence>
+        {isPostModalOpen && (
+          <CreatePost
+            isOpen={isPostModalOpen}
+            onClose={() => setIsPostModalOpen(false)}
+          />
+        )}
+      </AnimatePresence>
+
       {/* --- BACKGROUND BLOBS --- */}
       <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
         <motion.div
@@ -118,60 +126,45 @@ const Community = ({ onWriteClick }) => {
         />
       </div>
 
-      {/* Texture */}
       <div className="absolute inset-0 opacity-[0.12] z-[0] pointer-events-none mix-blend-multiply fixed bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
 
       <main className="relative z-10 w-full pb-32">
-        {/* --- 1. MARQUEE --- */}
         <SubtleMarquee />
 
-        {/* --- 2. HEADER --- */}
         <div className="max-w-7xl mx-auto px-6 mb-20 text-center">
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
             className="text-6xl md:text-8xl font-medium tracking-tight text-[#1A1A1A]"
           >
             Shared{" "}
             <span className="italic text-[#BC4B28] font-light">Voices.</span>
           </motion.h1>
-
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.2 }}
-            className="mt-6 text-xl text-[#1A1A1A]/60 max-w-2xl mx-auto font-serif italic"
-          >
+          <motion.p className="mt-6 text-xl text-[#1A1A1A]/60 max-w-2xl mx-auto font-serif italic">
             Real stories from people making a tangible difference.
           </motion.p>
         </div>
 
-        {/* --- 3. GRID LAYOUT --- */}
         <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
           {/* === LEFT: FEED === */}
           <div className="lg:col-span-8">
-            {/* Soft Tabs */}
             <div className="flex gap-8 mb-12 border-b border-[#1A1A1A]/10 pb-4">
-              {["stories", "tips"].map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`text-xs uppercase tracking-[0.2em] font-sans font-bold transition-colors relative ${
-                    activeTab === tab
-                      ? "text-[#BC4B28]"
-                      : "text-[#1A1A1A]/40 hover:text-[#1A1A1A]"
-                  }`}
-                >
-                  {tab}
-                  {activeTab === tab && (
-                    <motion.div
-                      layoutId="tabLine"
-                      className="absolute -bottom-[17px] left-0 right-0 h-[2px] bg-[#BC4B28]"
-                    />
-                  )}
-                </button>
-              ))}
+              <button
+                onClick={() => setActiveTab("stories")}
+                className={`text-xs uppercase tracking-[0.2em] font-sans font-bold transition-colors relative ${
+                  activeTab === "stories"
+                    ? "text-[#BC4B28]"
+                    : "text-[#1A1A1A]/40"
+                }`}
+              >
+                STORIES
+                {activeTab === "stories" && (
+                  <motion.div
+                    layoutId="tabLine"
+                    className="absolute -bottom-[17px] left-0 right-0 h-[2px] bg-[#BC4B28]"
+                  />
+                )}
+              </button>
             </div>
 
             <div className="min-h-[500px]">
@@ -184,23 +177,16 @@ const Community = ({ onWriteClick }) => {
                     exit={{ opacity: 0 }}
                     className="space-y-6"
                   >
-                    {stories.map((story, index) => (
+                    {/* MAP OVER COMBINED STORIES */}
+                    {allStories.map((story, index) => (
                       <motion.div
                         key={story.id}
                         initial={{ opacity: 0, y: 20 }}
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true }}
                         transition={{ delay: index * 0.1 }}
-                        className="group relative bg-white/40 backdrop-blur-md border border-[#1A1A1A]/5 rounded-[32px] p-8 md:p-10 hover:bg-white/70 transition-all duration-500 hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.05)]"
+                        className="group relative bg-white/40 backdrop-blur-md border border-[#1A1A1A]/5 rounded-[32px] p-8 md:p-10 hover:bg-white/70 transition-all duration-500 hover:shadow-lg"
                       >
-                        {/* Hover Gradient */}
-                        <div
-                          className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-500 rounded-[32px] pointer-events-none"
-                          style={{
-                            background: `linear-gradient(to bottom right, ${story.color}15, transparent)`,
-                          }}
-                        />
-
                         <div className="relative z-10">
                           <div className="flex items-center gap-3 mb-6">
                             <span className="px-3 py-1 bg-[#1A1A1A]/5 rounded-full text-[10px] font-bold font-sans uppercase tracking-wider text-[#1A1A1A]/60">
@@ -221,104 +207,34 @@ const Community = ({ onWriteClick }) => {
 
                           <div className="flex items-center justify-between border-t border-[#1A1A1A]/5 pt-6">
                             <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-full bg-[#1A1A1A]/10 flex items-center justify-center text-xs font-serif italic text-[#1A1A1A]">
-                                {story.author[0]}
+                              {/* Show Avatar or Initial */}
+                              <div className="w-8 h-8 rounded-full bg-[#BC4B28] text-white flex items-center justify-center text-xs font-serif italic overflow-hidden">
+                                {story.authorPhoto ? (
+                                  <img
+                                    src={story.authorPhoto}
+                                    alt=""
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  story.author[0]
+                                )}
                               </div>
                               <span className="text-xs font-sans font-bold text-[#1A1A1A]/60 uppercase tracking-wider">
                                 {story.author}
                               </span>
                             </div>
-                            <span className="text-2xl group-hover:translate-x-2 transition-transform duration-300 text-[#BC4B28]">
-                              →
-                            </span>
                           </div>
                         </div>
                       </motion.div>
                     ))}
                   </motion.div>
                 )}
-
-                {activeTab === "tips" && (
-                  <motion.div
-                    key="tips"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="grid grid-cols-1 md:grid-cols-2 gap-6"
-                  >
-                    {tips.map((tip) => (
-                      <div
-                        key={tip.id}
-                        className="bg-white/40 backdrop-blur rounded-[24px] p-8 border border-[#1A1A1A]/5"
-                      >
-                        <p className="text-xl font-serif italic mb-6">
-                          "{tip.text}"
-                        </p>
-                        <span className="text-xs font-sans font-bold uppercase tracking-wider opacity-40">
-                          — {tip.author}
-                        </span>
-                      </div>
-                    ))}
-                  </motion.div>
-                )}
               </AnimatePresence>
-            </div>
-
-            {/* Load More */}
-            <div className="mt-16 text-center">
-              <button className="px-8 py-3 rounded-full border border-[#1A1A1A]/10 bg-white/30 text-xs font-sans font-bold uppercase tracking-widest hover:bg-[#1A1A1A] hover:text-[#EFEDE6] transition-all">
-                Load More Stories
-              </button>
             </div>
           </div>
 
-          {/* === RIGHT: SIDEBAR (Floating Glass) === */}
+          {/* === RIGHT: SIDEBAR === */}
           <div className="lg:col-span-4 lg:sticky lg:top-32 space-y-6">
-            {/* Sidebar Card 1 */}
-            <div className="bg-white/30 backdrop-blur-md border border-[#1A1A1A]/5 rounded-[32px] p-8">
-              <h4 className="text-xs font-sans font-bold uppercase tracking-[0.2em] opacity-40 mb-6">
-                Trending Tags
-              </h4>
-              <div className="flex flex-wrap gap-2">
-                {[
-                  "#SafeDisposal",
-                  "#EcoFriendly",
-                  "#PharmacyRun",
-                  "#CleanWater",
-                ].map((tag) => (
-                  <span
-                    key={tag}
-                    className="text-[10px] font-sans font-bold bg-[#EFEDE6] border border-[#1A1A1A]/5 px-3 py-1.5 rounded-full hover:bg-[#BC4B28] hover:text-white transition-colors cursor-pointer"
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            {/* Sidebar Card 2: Contributors */}
-            <div className="bg-white/30 backdrop-blur-md border border-[#1A1A1A]/5 rounded-[32px] p-8">
-              <h4 className="text-xs font-sans font-bold uppercase tracking-[0.2em] opacity-40 mb-6">
-                Top Contributors
-              </h4>
-              <div className="space-y-4">
-                {[
-                  { name: "Dr. A. Singh", points: "1.2k" },
-                  { name: "EcoWarrior_99", points: "980" },
-                  { name: "Sarah J.", points: "850" },
-                ].map((u, i) => (
-                  <div key={i} className="flex justify-between items-center">
-                    <span className="font-serif italic text-[#1A1A1A]/80">
-                      {u.name}
-                    </span>
-                    <span className="text-[10px] font-sans font-bold bg-[#1A1A1A]/5 px-2 py-1 rounded">
-                      {u.points}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Sidebar Card 3: CTA */}
             <div className="bg-[#1A1A1A] text-[#EFEDE6] rounded-[32px] p-8 text-center relative overflow-hidden group">
               <div className="absolute inset-0 bg-[#BC4B28] translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-in-out" />
               <div className="relative z-10">
@@ -328,12 +244,13 @@ const Community = ({ onWriteClick }) => {
                 <p className="text-xs font-sans opacity-60 mb-6">
                   Your experience can inspire others.
                 </p>
-                {/* 2. Attached onClick handler here 👇 */}
+
+                {/* UPDATED BUTTON */}
                 <button
-                  onClick={onWriteClick}
+                  onClick={handleShareClick}
                   className="w-full py-3 bg-[#EFEDE6] text-[#1A1A1A] rounded-full text-[10px] font-sans font-bold uppercase tracking-[0.2em] cursor-pointer hover:bg-[#EFEDE6]/90 transition-colors"
                 >
-                  Share Now
+                  {user ? "Write Post" : "Login to Share"}
                 </button>
               </div>
             </div>

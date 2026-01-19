@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   BarChart,
   Bar,
@@ -15,7 +15,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../auth/AuthContext";
 import { getDashboardData } from "../firebase/dashboardService";
 import { logDisposal } from "../firebase/disposalService";
-import { useEffect } from "react";
+import { subscribeToPosts } from "../firebase/postService"; // 1. IMPORT THIS
 
 // ================= THEME CONFIG =================
 const COLORS = ["#4A5D23", "#BC4B28", "#2C5F58", "#1A1A1A"];
@@ -186,6 +186,9 @@ export default function Dashboard() {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // 2. STATE FOR POSTS
+  const [communityPosts, setCommunityPosts] = useState([]);
+
   // --- FETCH DASHBOARD DATA ---
   const fetchDashboard = async () => {
     try {
@@ -196,11 +199,7 @@ export default function Dashboard() {
 
       setLoading(true);
       const result = await getDashboardData(user.uid);
-      console.log("Dashboard data fetched:", result);
-
-      // ✅ FIX: Use the disposals array from the result object
       const disposals = result?.disposals || [];
-      console.log("Setting data with disposals:", disposals.length);
       setData(disposals);
     } catch (error) {
       console.error("Error fetching dashboard:", error);
@@ -217,6 +216,14 @@ export default function Dashboard() {
     }
   }, [user?.uid]);
 
+  // 3. SUBSCRIBE TO POSTS
+  useEffect(() => {
+    const unsubscribe = subscribeToPosts((posts) => {
+      setCommunityPosts(posts.slice(0, 3)); // Only show top 3 recent posts
+    });
+    return () => unsubscribe();
+  }, []);
+
   // --- CALCULATIONS ---
   const stats = useMemo(() => {
     let totalMedicines = 0;
@@ -231,7 +238,6 @@ export default function Dashboard() {
       totalWater += count * 25;
       totalScore += count * 5;
 
-      // ✅ FIX: Safely parse timestamp
       try {
         const date = d.timestamp?.toDate?.() || new Date(d.timestamp);
         const month = date.toLocaleString("default", {
@@ -242,7 +248,6 @@ export default function Dashboard() {
         console.error("Error parsing date:", e);
       }
 
-      // ✅ FIX: Handle medicineTypes safely
       const typeData = d.medicineTypes || {};
       Object.entries(typeData).forEach(([t, c]) => {
         types[t] = (types[t] || 0) + c;
@@ -268,33 +273,25 @@ export default function Dashboard() {
         alert("Please log in first");
         return;
       }
-
-      console.log("Submitting disposal:", { qty, type, userId: user.uid });
-
-      // 1️⃣ Save data to Firestore
       await logDisposal({
         userId: user.uid,
         medicineCount: qty,
         medicineType: type,
       });
-
-      console.log("Disposal logged successfully");
-
-      // 2️⃣ RELOAD DASHBOARD DATA
       await fetchDashboard();
-
-      // 3️⃣ Close modal
       setModalOpen(false);
     } catch (error) {
       console.error("Error adding donation:", error);
-      alert("Error saving entry. Check console for details.");
+      alert("Error saving entry.");
     }
   };
 
   if (loading) {
     return (
       <div className="min-h-screen bg-[#EFEDE6] text-[#1A1A1A] flex items-center justify-center">
-        <div className="font-serif text-xl opacity-60">Loading dashboard...</div>
+        <div className="font-serif text-xl opacity-60">
+          Loading dashboard...
+        </div>
       </div>
     );
   }
@@ -508,64 +505,127 @@ export default function Dashboard() {
           </HoverCard>
         </div>
 
-        {/* --- RECENT LOGS --- */}
-        <div className="bg-white border border-[#1A1A1A]/10 rounded-[4px] overflow-hidden p-8 shadow-sm">
-          <div className="flex justify-between items-end mb-8 border-b border-[#1A1A1A]/10 pb-4">
-            <div>
-              <h2 className="font-mono text-xs font-bold uppercase tracking-[0.2em] opacity-50">
-                History
-              </h2>
-              <h3 className="font-serif text-2xl mt-1">Recent Logs</h3>
+        {/* --- SPLIT SECTION: RECENT LOGS + COMMUNITY UPDATES --- */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* LEFT: RECENT LOGS */}
+          <div className="bg-white border border-[#1A1A1A]/10 rounded-[4px] overflow-hidden p-8 shadow-sm h-full">
+            <div className="flex justify-between items-end mb-8 border-b border-[#1A1A1A]/10 pb-4">
+              <div>
+                <h2 className="font-mono text-xs font-bold uppercase tracking-[0.2em] opacity-50">
+                  History
+                </h2>
+                <h3 className="font-serif text-2xl mt-1">Recent Logs</h3>
+              </div>
+              <div className="font-mono text-[10px] uppercase tracking-widest opacity-40">
+                Verified Entries ({data.length})
+              </div>
             </div>
-            <div className="font-mono text-[10px] uppercase tracking-widest opacity-40">
-              Verified Entries ({data.length})
+            <div className="divide-y divide-[#1A1A1A]/5">
+              {data.length === 0 ? (
+                <div className="py-8 text-center text-[#1A1A1A]/50 font-serif">
+                  No entries yet. Log your first disposal!
+                </div>
+              ) : (
+                data.map((d) => (
+                  <div
+                    key={d.donationId}
+                    className="py-4 flex flex-col md:flex-row md:items-center justify-between group hover:bg-[#F9F9F9] -mx-4 px-4 transition-colors rounded"
+                  >
+                    <div className="flex items-center gap-4 mb-2 md:mb-0">
+                      <div className="w-10 h-10 rounded-full bg-[#EFEDE6] flex items-center justify-center font-serif text-lg text-[#1A1A1A]/60 group-hover:bg-[#BC4B28] group-hover:text-white transition-colors">
+                        ✓
+                      </div>
+                      <div>
+                        <p className="font-serif text-lg text-[#1A1A1A]">
+                          {d.medicineCount} Items
+                        </p>
+                        <p className="font-mono text-[10px] uppercase tracking-widest opacity-40">
+                          ID: {d.donationId}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-8 pl-14 md:pl-0">
+                      <div className="text-right">
+                        <span className="block font-mono text-[9px] uppercase tracking-widest opacity-40">
+                          Impact
+                        </span>
+                        <span className="font-bold text-[#BC4B28]">
+                          {d.medicineCount * 5} PTS
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        <span className="block font-mono text-[9px] uppercase tracking-widest opacity-40">
+                          Date
+                        </span>
+                        <span className="font-sans text-sm opacity-80">
+                          {new Date(
+                            d.timestamp?.toDate?.() || d.timestamp,
+                          ).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
-          <div className="divide-y divide-[#1A1A1A]/5">
-            {data.length === 0 ? (
-              <div className="py-8 text-center text-[#1A1A1A]/50 font-serif">
-                No entries yet. Log your first disposal!
+
+          {/* 4. RIGHT: COMMUNITY UPDATES */}
+          <div className="bg-[#EFEDE6] border border-[#BC4B28]/20 rounded-[4px] p-8 relative overflow-hidden h-full">
+            {/* Background Accent */}
+            <div className="absolute top-0 right-0 w-32 h-32 bg-[#BC4B28]/5 rounded-full blur-3xl pointer-events-none" />
+
+            <div className="flex justify-between items-end mb-8 border-b border-[#BC4B28]/10 pb-4 relative z-10">
+              <div>
+                <h2 className="font-mono text-xs font-bold uppercase tracking-[0.2em] text-[#BC4B28]/60">
+                  Network
+                </h2>
+                <h3 className="font-serif text-2xl mt-1 text-[#1A1A1A]">
+                  Community Pulse
+                </h3>
               </div>
-            ) : (
-              data.map((d) => (
-                <div
-                  key={d.donationId}
-                  className="py-4 flex flex-col md:flex-row md:items-center justify-between group hover:bg-[#F9F9F9] -mx-4 px-4 transition-colors rounded"
-                >
-                  <div className="flex items-center gap-4 mb-2 md:mb-0">
-                    <div className="w-10 h-10 rounded-full bg-[#EFEDE6] flex items-center justify-center font-serif text-lg text-[#1A1A1A]/60 group-hover:bg-[#BC4B28] group-hover:text-white transition-colors">
-                      ✓
-                    </div>
-                    <div>
-                      <p className="font-serif text-lg text-[#1A1A1A]">
-                        {d.medicineCount} Items
-                      </p>
-                      <p className="font-mono text-[10px] uppercase tracking-widest opacity-40">
-                        ID: {d.donationId}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-8 pl-14 md:pl-0">
-                    <div className="text-right">
-                      <span className="block font-mono text-[9px] uppercase tracking-widest opacity-40">
-                        Impact
-                      </span>
-                      <span className="font-bold text-[#BC4B28]">
-                        {d.medicineCount * 5} PTS
-                      </span>
-                    </div>
-                    <div className="text-right">
-                      <span className="block font-mono text-[9px] uppercase tracking-widest opacity-40">
-                        Date
-                      </span>
-                      <span className="font-sans text-sm opacity-80">
-                        {new Date(d.timestamp?.toDate?.() || d.timestamp).toLocaleDateString()}
-                      </span>
-                    </div>
-                  </div>
+              <div className="w-2 h-2 rounded-full bg-[#BC4B28] animate-pulse" />
+            </div>
+
+            <div className="space-y-4 relative z-10">
+              {communityPosts.length === 0 ? (
+                <div className="text-center py-8 opacity-50 font-serif text-sm">
+                  Connecting to secure channel...
                 </div>
-              ))
-            )}
+              ) : (
+                communityPosts.map((post) => (
+                  <div
+                    key={post.id}
+                    className="bg-white p-5 rounded-lg border border-[#1A1A1A]/5 shadow-sm hover:shadow-md transition-all"
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="px-2 py-0.5 rounded bg-[#BC4B28]/10 text-[#BC4B28] text-[9px] font-bold uppercase tracking-wider">
+                        {post.tag || "Update"}
+                      </span>
+                      <span className="text-[10px] font-mono opacity-40">
+                        {new Date(
+                          post.createdAt?.toDate?.() || Date.now(),
+                        ).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <h4 className="font-serif font-bold text-lg leading-tight mb-2">
+                      {post.title}
+                    </h4>
+                    <p className="text-xs font-sans text-[#1A1A1A]/70 line-clamp-2 leading-relaxed">
+                      {post.preview}
+                    </p>
+                    <div className="mt-3 flex items-center gap-2 pt-3 border-t border-[#1A1A1A]/5">
+                      <div className="w-5 h-5 rounded-full bg-[#1A1A1A]/10 flex items-center justify-center text-[9px] font-bold">
+                        {post.author?.[0]}
+                      </div>
+                      <span className="text-[10px] font-mono uppercase tracking-wider opacity-60">
+                        {post.author}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </div>
       </main>
@@ -615,7 +675,10 @@ function KPICard({ label, value, unit, secondaryValue, color, note, icon }) {
             <p className="font-mono text-[10px] uppercase tracking-widest opacity-40 mb-1">
               Contamination Prevented
             </p>
-            <span className="font-serif text-lg font-medium" style={{ color: color }}>
+            <span
+              className="font-serif text-lg font-medium"
+              style={{ color: color }}
+            >
               {secondaryValue}
             </span>
           </div>
