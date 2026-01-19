@@ -2,8 +2,9 @@ import { db } from "./firebase";
 import {
   collection,
   addDoc,
-  deleteDoc, // <--- IMPORTED
-  doc, // <--- IMPORTED
+  deleteDoc,
+  updateDoc, // <--- Imported for editing
+  doc,
   query,
   orderBy,
   onSnapshot,
@@ -21,6 +22,7 @@ export const addPost = async (user, postData) => {
       authorPhoto: user.photoURL || null,
       uid: user.uid,
       createdAt: serverTimestamp(),
+      // Store a readable date string for display
       date: new Date().toLocaleDateString("en-US", {
         month: "short",
         day: "numeric",
@@ -59,6 +61,18 @@ export const deletePost = async (postId) => {
     return { success: true };
   } catch (error) {
     console.error("Error deleting post:", error);
+    throw error;
+  }
+};
+
+// 4. Function to Update a Post (Edit)
+export const updatePost = async (postId, updatedData) => {
+  try {
+    const postRef = doc(db, COLLECTION_NAME, postId);
+    await updateDoc(postRef, updatedData);
+    return { success: true };
+  } catch (error) {
+    console.error("Error updating post:", error);
     throw error;
   }
 };

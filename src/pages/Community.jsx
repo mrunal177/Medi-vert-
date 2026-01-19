@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useAuth } from "../auth/AuthContext"; // 1. Import Auth
-import { subscribeToPosts } from "../firebase/postService"; // 2. Import Service
-import CreatePost from "../components/CreatePost"; // 3. Import Modal
+import { useAuth } from "../auth/AuthContext";
+import { subscribeToPosts, updatePost } from "../firebase/postService"; // Added updatePost
+import CreatePost from "../components/CreatePost";
 
-// --- ANIMATION VARIANTS (Keep your existing variants) ---
+// --- ANIMATION VARIANTS ---
 const blobVariant = {
   animate: {
     scale: [1, 1.15, 0.9, 1],
@@ -20,35 +20,6 @@ const blobVariant = {
   },
 };
 
-// --- STATIC DATA (Keep as fallback or initial data) ---
-const initialStories = [
-  {
-    id: "static-1",
-    author: "Priya M.",
-    role: "Home Organizer",
-    date: "Dec 28, 2025",
-    tag: "Experience",
-    title: "How I cleared out 5 years of expired medicines",
-    preview: "I had no idea how many unused medicines had accumulated...",
-    color: "#BC4B28",
-  },
-  // ... keep your other static stories if you want mixed content
-];
-
-const tips = [
-  {
-    id: 1,
-    text: "Keep a small box near your medicine cabinet...",
-    author: "Anjali D.",
-  },
-  {
-    id: 2,
-    text: "Check expiry dates before buying new strips...",
-    author: "Dr. Sharma",
-  },
-];
-
-// --- SUBTLE MARQUEE (Keep as is) ---
 const SubtleMarquee = () => {
   return (
     <div className="relative w-full overflow-hidden border-y border-[#1A1A1A]/5 py-4 bg-[#EFEDE6]/50 backdrop-blur-sm mb-12">
@@ -73,13 +44,186 @@ const SubtleMarquee = () => {
   );
 };
 
+// ==========================================
+// 💡 NEW: STORY CARD COMPONENT
+// Handles "Read More" and "Editing" logic
+// ==========================================
+const StoryCard = ({ story, user, index }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+
+  // Edit State
+  const [editTitle, setEditTitle] = useState(story.title);
+  const [editContent, setEditContent] = useState(story.preview);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Check if current user is the author
+  const isAuthor = user?.uid && story.uid === user.uid;
+
+  // Truncation Logic
+  const TRUNCATE_LENGTH = 180;
+  const isLongText = story.preview.length > TRUNCATE_LENGTH;
+  const displayedText =
+    isExpanded || !isLongText
+      ? story.preview
+      : story.preview.slice(0, TRUNCATE_LENGTH) + "...";
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      await updatePost(story.id, {
+        title: editTitle,
+        preview: editContent,
+      });
+      setIsEditing(false);
+    } catch (error) {
+      alert("Failed to update story.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ delay: index * 0.1 }}
+      className="group relative bg-white/40 backdrop-blur-md border border-[#1A1A1A]/5 rounded-[32px] p-8 md:p-10 hover:bg-white/70 transition-all duration-500 hover:shadow-lg"
+    >
+      {/* BACKGROUND GRADIENT */}
+      <div
+        className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-500 rounded-[32px] pointer-events-none"
+        style={{
+          background: `linear-gradient(to bottom right, ${story.color || "#BC4B28"}15, transparent)`,
+        }}
+      />
+
+      <div className="relative z-10">
+        {/* HEADER: Tags & Date */}
+        <div className="flex justify-between items-start mb-6">
+          <div className="flex items-center gap-3">
+            <span className="px-3 py-1 bg-[#1A1A1A]/5 rounded-full text-[10px] font-bold font-sans uppercase tracking-wider text-[#1A1A1A]/60">
+              {story.tag || "Story"}
+            </span>
+            <span className="text-xs font-sans text-[#1A1A1A]/40">
+              {story.date}
+            </span>
+          </div>
+
+          {/* EDIT BUTTON (Only for Author) */}
+          {isAuthor && !isEditing && (
+            <button
+              onClick={() => setIsEditing(true)}
+              className="text-xs font-bold uppercase tracking-wider text-[#1A1A1A]/30 hover:text-[#BC4B28] transition-colors"
+            >
+              Edit
+            </button>
+          )}
+        </div>
+
+        {/* --- CONTENT AREA --- */}
+        {isEditing ? (
+          /* EDIT MODE */
+          <div className="space-y-4">
+            <input
+              value={editTitle}
+              onChange={(e) => setEditTitle(e.target.value)}
+              className="w-full bg-white/50 border border-[#1A1A1A]/10 p-2 rounded text-2xl font-medium focus:outline-none focus:border-[#BC4B28]"
+            />
+            <textarea
+              value={editContent}
+              onChange={(e) => setEditContent(e.target.value)}
+              className="w-full bg-white/50 border border-[#1A1A1A]/10 p-2 rounded h-32 text-lg font-sans leading-relaxed focus:outline-none focus:border-[#BC4B28] resize-none"
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={handleSave}
+                disabled={isSaving}
+                className="px-4 py-2 bg-[#1A1A1A] text-white text-xs font-bold uppercase tracking-wider rounded hover:bg-[#BC4B28] transition-colors"
+              >
+                {isSaving ? "Saving..." : "Save Changes"}
+              </button>
+              <button
+                onClick={() => setIsEditing(false)}
+                className="px-4 py-2 bg-transparent border border-[#1A1A1A]/20 text-[#1A1A1A] text-xs font-bold uppercase tracking-wider rounded hover:bg-[#1A1A1A]/5 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          /* VIEW MODE */
+          <>
+            <h3 className="text-3xl font-medium mb-4 group-hover:text-[#BC4B28] transition-colors duration-300">
+              {story.title}
+            </h3>
+
+            <div className="mb-8">
+              <p className="text-lg font-sans text-[#1A1A1A]/60 leading-relaxed inline">
+                {displayedText}
+              </p>
+
+              {/* READ MORE TOGGLE */}
+              {isLongText && (
+                <button
+                  onClick={() => setIsExpanded(!isExpanded)}
+                  className="ml-2 text-sm font-bold text-[#BC4B28] hover:underline focus:outline-none"
+                >
+                  {isExpanded ? "Read Less" : "Read More"}
+                </button>
+              )}
+            </div>
+          </>
+        )}
+
+        {/* FOOTER: Author Info */}
+        <div className="flex items-center justify-between border-t border-[#1A1A1A]/5 pt-6">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-[#BC4B28] text-white flex items-center justify-center text-xs font-serif italic overflow-hidden">
+              {story.authorPhoto ? (
+                <img
+                  src={story.authorPhoto}
+                  alt=""
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                story.author?.[0] || "U"
+              )}
+            </div>
+            <span className="text-xs font-sans font-bold text-[#1A1A1A]/60 uppercase tracking-wider">
+              {story.author}
+            </span>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
+// ==========================================
+// MAIN PAGE COMPONENT
+// ==========================================
 const Community = ({ onWriteClick }) => {
-  const { user } = useAuth(); // Get current user
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("stories");
-  const [realPosts, setRealPosts] = useState([]); // State for Firebase posts
+  const [realPosts, setRealPosts] = useState([]);
   const [isPostModalOpen, setIsPostModalOpen] = useState(false);
 
-  // Fetch posts from Firebase
+  // Static fallback data
+  const initialStories = [
+    {
+      id: "static-1",
+      author: "Priya M.",
+      date: "Dec 28, 2025",
+      tag: "Experience",
+      title: "How I cleared out 5 years of expired medicines",
+      preview:
+        "I had no idea how many unused medicines had accumulated in my cabinet until I decided to organize them. The local pharmacy accepted everything and it felt great to declutter safely.",
+      color: "#BC4B28",
+    },
+  ];
+
   useEffect(() => {
     const unsubscribe = subscribeToPosts((fetchedPosts) => {
       setRealPosts(fetchedPosts);
@@ -87,21 +231,18 @@ const Community = ({ onWriteClick }) => {
     return () => unsubscribe();
   }, []);
 
-  // Combine Real + Static posts
   const allStories = [...realPosts, ...initialStories];
 
-  // Logic: If logged in -> Open Post Modal. If not -> Open Login (via App.jsx)
   const handleShareClick = () => {
     if (user) {
       setIsPostModalOpen(true);
     } else {
-      onWriteClick(); // This opens the Login modal from App.jsx
+      onWriteClick();
     }
   };
 
   return (
     <section className="relative min-h-screen w-full bg-[#EFEDE6] text-[#1A1A1A] font-serif overflow-hidden pt-32">
-      {/* Post Modal */}
       <AnimatePresence>
         {isPostModalOpen && (
           <CreatePost
@@ -111,7 +252,6 @@ const Community = ({ onWriteClick }) => {
         )}
       </AnimatePresence>
 
-      {/* --- BACKGROUND BLOBS --- */}
       <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
         <motion.div
           variants={blobVariant}
@@ -146,7 +286,6 @@ const Community = ({ onWriteClick }) => {
         </div>
 
         <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
-          {/* === LEFT: FEED === */}
           <div className="lg:col-span-8">
             <div className="flex gap-8 mb-12 border-b border-[#1A1A1A]/10 pb-4">
               <button
@@ -177,55 +316,14 @@ const Community = ({ onWriteClick }) => {
                     exit={{ opacity: 0 }}
                     className="space-y-6"
                   >
-                    {/* MAP OVER COMBINED STORIES */}
                     {allStories.map((story, index) => (
-                      <motion.div
-                        key={story.id}
-                        initial={{ opacity: 0, y: 20 }}
-                        whileInView={{ opacity: 1, y: 0 }}
-                        viewport={{ once: true }}
-                        transition={{ delay: index * 0.1 }}
-                        className="group relative bg-white/40 backdrop-blur-md border border-[#1A1A1A]/5 rounded-[32px] p-8 md:p-10 hover:bg-white/70 transition-all duration-500 hover:shadow-lg"
-                      >
-                        <div className="relative z-10">
-                          <div className="flex items-center gap-3 mb-6">
-                            <span className="px-3 py-1 bg-[#1A1A1A]/5 rounded-full text-[10px] font-bold font-sans uppercase tracking-wider text-[#1A1A1A]/60">
-                              {story.tag}
-                            </span>
-                            <span className="text-xs font-sans text-[#1A1A1A]/40">
-                              {story.date}
-                            </span>
-                          </div>
-
-                          <h3 className="text-3xl font-medium mb-4 group-hover:text-[#BC4B28] transition-colors duration-300">
-                            {story.title}
-                          </h3>
-
-                          <p className="text-lg font-sans text-[#1A1A1A]/60 leading-relaxed mb-8">
-                            {story.preview}
-                          </p>
-
-                          <div className="flex items-center justify-between border-t border-[#1A1A1A]/5 pt-6">
-                            <div className="flex items-center gap-3">
-                              {/* Show Avatar or Initial */}
-                              <div className="w-8 h-8 rounded-full bg-[#BC4B28] text-white flex items-center justify-center text-xs font-serif italic overflow-hidden">
-                                {story.authorPhoto ? (
-                                  <img
-                                    src={story.authorPhoto}
-                                    alt=""
-                                    className="w-full h-full object-cover"
-                                  />
-                                ) : (
-                                  story.author[0]
-                                )}
-                              </div>
-                              <span className="text-xs font-sans font-bold text-[#1A1A1A]/60 uppercase tracking-wider">
-                                {story.author}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </motion.div>
+                      /* Using the new StoryCard component here */
+                      <StoryCard
+                        key={story.id || index}
+                        story={story}
+                        user={user}
+                        index={index}
+                      />
                     ))}
                   </motion.div>
                 )}
@@ -233,7 +331,6 @@ const Community = ({ onWriteClick }) => {
             </div>
           </div>
 
-          {/* === RIGHT: SIDEBAR === */}
           <div className="lg:col-span-4 lg:sticky lg:top-32 space-y-6">
             <div className="bg-[#1A1A1A] text-[#EFEDE6] rounded-[32px] p-8 text-center relative overflow-hidden group">
               <div className="absolute inset-0 bg-[#BC4B28] translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-in-out" />
@@ -244,8 +341,6 @@ const Community = ({ onWriteClick }) => {
                 <p className="text-xs font-sans opacity-60 mb-6">
                   Your experience can inspire others.
                 </p>
-
-                {/* UPDATED BUTTON */}
                 <button
                   onClick={handleShareClick}
                   className="w-full py-3 bg-[#EFEDE6] text-[#1A1A1A] rounded-full text-[10px] font-sans font-bold uppercase tracking-[0.2em] cursor-pointer hover:bg-[#EFEDE6]/90 transition-colors"

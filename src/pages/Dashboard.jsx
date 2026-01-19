@@ -15,7 +15,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../auth/AuthContext";
 import { getDashboardData } from "../firebase/dashboardService";
 import { logDisposal } from "../firebase/disposalService";
-import { subscribeToPosts, deletePost } from "../firebase/postService"; // <--- IMPORT deletePost
+import { subscribeToPosts, deletePost } from "../firebase/postService";
 
 // ================= THEME CONFIG =================
 const COLORS = ["#4A5D23", "#BC4B28", "#2C5F58", "#1A1A1A"];
@@ -83,6 +83,33 @@ const HoverCard = ({ children, note, color, className = "" }) => {
       </AnimatePresence>
     </motion.div>
   );
+};
+
+// --- CUSTOM TOOLTIP COMPONENT ---
+const CustomTooltip = ({ active, payload }) => {
+  if (active && payload && payload.length) {
+    const data = payload[0];
+    return (
+      <div className="bg-white/95 backdrop-blur-sm border border-[#1A1A1A]/10 px-3 py-2 rounded shadow-lg pointer-events-none">
+        <div className="flex items-center gap-2">
+          <div
+            className="w-2 h-2 rounded-full"
+            style={{ backgroundColor: data.payload.fill || "#1A1A1A" }}
+          />
+          <span className="font-mono text-[10px] uppercase tracking-widest opacity-60">
+            {data.name}
+          </span>
+        </div>
+        <p className="font-serif text-lg font-bold text-[#1A1A1A] leading-none mt-1">
+          {data.value}{" "}
+          <span className="text-[10px] font-sans font-normal opacity-40">
+            units
+          </span>
+        </p>
+      </div>
+    );
+  }
+  return null;
 };
 
 // ================= MODAL COMPONENT =================
@@ -475,12 +502,11 @@ export default function Dashboard() {
                           />
                         ))}
                       </Pie>
+                      {/* ✅ FIX: Position locked to Top-Left (0,0) */}
                       <Tooltip
-                        contentStyle={{
-                          backgroundColor: "#EFEDE6",
-                          border: "1px solid #1A1A1A",
-                          fontFamily: "serif",
-                        }}
+                        content={<CustomTooltip />}
+                        cursor={false}
+                        position={{ x: 0, y: 0 }}
                       />
                     </PieChart>
                   </ResponsiveContainer>
