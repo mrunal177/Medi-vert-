@@ -1,11 +1,14 @@
 import React, { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   motion,
   AnimatePresence,
   useScroll,
   useMotionValueEvent,
 } from "framer-motion";
+import { signOut } from "firebase/auth";
+import { auth } from "../firebase";
+import { useAuth } from "../auth/AuthContext";
 
 const navLinks = [
   { name: "Learn", path: "/learn" },
@@ -15,37 +18,33 @@ const navLinks = [
 ];
 
 const Navbar = ({ onLoginClick }) => {
+  const { user } = useAuth();
   const location = useLocation();
-  const { scrollY } = useScroll();
+  const navigate = useNavigate();
 
-  // FIX 1: Default to TRUE so it's visible immediately on load (except on Home)
-  const isHome = location.pathname === "/actions";
-  const [visible, setVisible] = useState(!isHome);
+  // --- SCROLL ANIMATION STATE ---
+  const { scrollY } = useScroll();
+  const [visible, setVisible] = useState(true);
 
   useMotionValueEvent(scrollY, "change", (latest) => {
     const previous = scrollY.getPrevious() || 0;
-
-    // FIX 2: STRICT LOGIC SEPARATION
-
-    // 1. Are we at the very top of the page? (0-50px)
+    // Don't hide if at the very top (0-50px)
     if (latest < 50) {
-      if (isHome) {
-        setVisible(false); // Hide on Home (Hero Section)
-      } else {
-        setVisible(true); // Always Show on other pages
-      }
-      return; // Stop here, don't run the scroll direction logic
+      setVisible(true);
+      return;
     }
-
-    // 2. Are we scrolling DOWN?
-    if (latest > previous) {
+    // Hide if scrolling down, Show if scrolling up
+    if (latest > previous && latest > 50) {
       setVisible(false);
-    }
-    // 3. Are we scrolling UP?
-    else {
+    } else {
       setVisible(true);
     }
   });
+
+  const handleLogout = async () => {
+    await signOut(auth);
+    navigate("/");
+  };
 
   return (
     <AnimatePresence mode="wait">
@@ -58,11 +57,10 @@ const Navbar = ({ onLoginClick }) => {
           className="fixed top-0 left-0 right-0 z-[100] px-6 py-4"
         >
           <div className="max-w-7xl mx-auto">
-            {/* Glass Container */}
             <div className="bg-[#EFEDE6]/90 backdrop-blur-md border border-[#1A1A1A]/5 rounded-full px-6 py-3 flex justify-between items-center shadow-lg hover:shadow-xl transition-shadow duration-300">
               {/* Logo */}
               <Link
-                to="/actions"
+                to="/"
                 className="text-lg font-serif font-bold tracking-tight text-[#1A1A1A] hover:text-[#BC4B28] transition-colors"
               >
                 MediVert.
@@ -79,7 +77,6 @@ const Navbar = ({ onLoginClick }) => {
                       className="relative text-xs font-sans font-bold uppercase tracking-[0.2em] text-[#1A1A1A]/60 hover:text-[#1A1A1A] transition-colors"
                     >
                       {link.name}
-                      {/* Active Dot Indicator */}
                       {isActive && (
                         <motion.div
                           layoutId="navDot"
@@ -91,16 +88,42 @@ const Navbar = ({ onLoginClick }) => {
                 })}
               </div>
 
-              {/* Action Button (Connected to Login Modal) */}
-              <button
-                onClick={onLoginClick}
-                className="group relative px-5 py-2 overflow-hidden rounded-full bg-[#1A1A1A] text-[#EFEDE6] cursor-pointer"
-              >
-                <div className="absolute inset-0 bg-[#BC4B28] translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
-                <span className="relative z-10 text-[10px] font-sans font-bold uppercase tracking-[0.2em] group-hover:text-white transition-colors">
-                  Join Now
-                </span>
-              </button>
+              {/* --- AUTH SECTION --- */}
+              <div className="flex items-center gap-4">
+                {!user ? (
+                  // STATE A: NOT LOGGED IN
+                  <button
+                    onClick={onLoginClick}
+                    className="group relative px-5 py-2 overflow-hidden rounded-full bg-[#1A1A1A] text-[#EFEDE6] cursor-pointer"
+                  >
+                    <div className="absolute inset-0 bg-[#BC4B28] translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
+                    <span className="relative z-10 text-[10px] font-sans font-bold uppercase tracking-[0.2em] group-hover:text-white transition-colors">
+                      Join Now
+                    </span>
+                  </button>
+                ) : (
+                  // STATE B: LOGGED IN
+                  <>
+                    {/* Tiny Avatar - NOW A CLICKABLE LINK TO DASHBOARD */}
+                    <Link
+                      to="/dashboard"
+                      className="w-8 h-8 rounded-full bg-[#BC4B28] text-white flex items-center justify-center font-serif font-bold text-xs border border-[#1A1A1A]/10 hover:scale-110 transition-transform duration-200 cursor-pointer shadow-sm"
+                      title="Go to Dashboard"
+                    >
+                      {user.displayName
+                        ? user.displayName[0].toUpperCase()
+                        : "U"}
+                    </Link>
+
+                    <button
+                      onClick={handleLogout}
+                      className="font-mono text-[10px] uppercase text-red-600/60 hover:text-red-600 font-bold tracking-widest ml-1"
+                    >
+                      Logout
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </motion.nav>

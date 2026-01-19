@@ -9,6 +9,7 @@ import Footer from "./components/Footer";
 import PageTransition from "./components/PageTransition";
 import Login from "./components/Login";
 import ScrollToTop from "./components/ScrollToTop";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 // --- PAGES ---
 import SilentScene from "./components/SilentShock";
@@ -18,9 +19,13 @@ import Contribute from "./pages/contribute";
 import MapPage from "./pages/MapPage";
 import MapOnlyPage from "./pages/MapView";
 import LearnPage from "./pages/LearnPage";
+import Dashboard from "./pages/Dashboard";
 
 function App() {
   const location = useLocation();
+
+  // FIX 1: Only hide Navbar on the landing page (SilentScene)
+  // Removed "/dashboard" from here so Navbar shows up now!
   const hideNavbar = location.pathname === "/";
   const [showLogin, setShowLogin] = useState(false);
 
@@ -113,10 +118,24 @@ function App() {
                 </PageTransition>
               }
             />
+
+            {/* FIX 2: DASHBOARD ROUTE IS NOW PROTECTED */}
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <PageTransition>
+                    <Dashboard />
+                  </PageTransition>
+                </ProtectedRoute>
+              }
+            />
           </Routes>
         </AnimatePresence>
 
-        <Footer />
+        {/* Hide Footer on Dashboard if you want a cleaner look, otherwise keep it */}
+        {location.pathname !== "/dashboard" && <Footer />}
+
         <Login
           isOpen={showLogin}
           onClose={() => setShowLogin(false)}
