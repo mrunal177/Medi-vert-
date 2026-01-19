@@ -24,15 +24,11 @@ const Navbar = ({ onLoginClick }) => {
   const { scrollY } = useScroll();
 
   const [visible, setVisible] = useState(true);
-  const [isScrolled, setIsScrolled] = useState(false);
-
-  // New state to track if image fails to load
   const [imgError, setImgError] = useState(false);
 
-  // Scroll Logic
+  // Scroll Logic: Hide when scrolling down, show when scrolling up
   useMotionValueEvent(scrollY, "change", (latest) => {
     const previous = scrollY.getPrevious() || 0;
-    setIsScrolled(latest > 10);
 
     // Always show on Map page
     if (location.pathname.includes("/map")) {
@@ -65,31 +61,38 @@ const Navbar = ({ onLoginClick }) => {
           initial={{ y: -100, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: -100, opacity: 0 }}
-          transition={{ duration: 0.3, ease: "easeInOut" }}
-          className={`sticky top-0 left-0 right-0 z-[100] w-full px-6 py-4 transition-all duration-300 ${
-            isScrolled || location.pathname.includes("/map")
-              ? "bg-[#EFEDE6]/80 backdrop-blur-xl border-b border-white/20 shadow-sm"
-              : "bg-transparent"
-          }`}
+          transition={{
+            duration: 0.4,
+            type: "spring",
+            damping: 20,
+            stiffness: 100,
+          }}
+          // CHANGED: Removed background from here. Added 'flex justify-center' to center the pill.
+          className="fixed top-4 left-0 right-0 z-[100] flex justify-center px-4"
         >
-          <div className="max-w-7xl mx-auto flex justify-between items-center">
+          {/* THE "PILL" CONTAINER 
+             - This is the "curving rectangle" you liked.
+             - It has the background, blur, and rounded corners.
+             - It does NOT span the full width.
+          */}
+          <div className="w-full max-w-5xl bg-[#EFEDE6]/90 backdrop-blur-xl border border-white/40 rounded-full shadow-2xl px-6 py-3 flex justify-between items-center transition-all hover:shadow-[0_8px_30px_rgb(0,0,0,0.12)]">
             {/* --- LOGO --- */}
             <Link
-              to="/actions"
-              className="text-2xl font-serif font-bold tracking-tighter text-[#1A1A1A] hover:text-[#BC4B28] transition-colors"
+              to="/"
+              className="text-2xl font-serif font-bold tracking-tighter text-[#1A1A1A] hover:text-[#BC4B28] transition-colors pl-2"
             >
               MediVert<span className="text-[#BC4B28]">.</span>
             </Link>
 
             {/* --- DESKTOP NAVIGATION --- */}
-            <div className="hidden md:flex items-center gap-8 bg-white/40 backdrop-blur-md px-8 py-2.5 rounded-full border border-white/50 shadow-sm">
+            <div className="hidden md:flex items-center gap-1">
               {navLinks.map((link) => {
                 const isActive = location.pathname === link.path;
                 return (
                   <Link
                     key={link.name}
                     to={link.path}
-                    className="relative group"
+                    className="relative px-5 py-2 group"
                   >
                     <span
                       className={`
@@ -102,7 +105,7 @@ const Navbar = ({ onLoginClick }) => {
                     {isActive && (
                       <motion.div
                         layoutId="navDot"
-                        className="absolute -bottom-1 left-0 right-0 h-0.5 bg-[#BC4B28] rounded-full"
+                        className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 bg-[#BC4B28] rounded-full"
                       />
                     )}
                   </Link>
@@ -133,16 +136,14 @@ const Navbar = ({ onLoginClick }) => {
                   >
                     {/* Avatar Circle */}
                     <div className="w-9 h-9 rounded-full bg-[#BC4B28] text-white flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform overflow-hidden relative">
-                      {/* LOGIC: Show Image ONLY if URL exists AND no error. Otherwise show Icon. */}
                       {user.photoURL && !imgError ? (
                         <img
                           src={user.photoURL}
                           alt="User"
                           className="w-full h-full object-cover"
-                          onError={() => setImgError(true)} // <-- This fixes the broken icon!
+                          onError={() => setImgError(true)}
                         />
                       ) : (
-                        // Fallback Icon
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
                           viewBox="0 0 24 24"
